@@ -76,12 +76,25 @@ if [[ "${WIN}" == "yes" ]]; then
   VS_INSTALL="winget install --id Microsoft.VisualStudio.2022.BuildTools -e --override \"--passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --add ${SPECTRE}\""
   if has_vs_component "${VC_TOOLS}"; then
     ok "C++ tools" "Visual Studio C++ build tools"
-    if has_vs_component "${SPECTRE}"; then
+    # node-gyp may pick any Visual Studio install that has the C++ tools
+    # (usually the newest), so every one of them needs the Spectre libraries.
+    VS_WITH_SPECTRE="$( "${VSWHERE}" -products '*' -requires "${VC_TOOLS}" "${SPECTRE}" -property installationPath 2> /dev/null | tr -d '\r' )"
+    VS_WITHOUT_SPECTRE=""
+    while IFS= read -r VS_PATH; do
+      VS_PATH="${VS_PATH%$'\r'}"
+      [[ -z "${VS_PATH}" ]] && continue
+      if ! grep -qxF "${VS_PATH}" <<< "${VS_WITH_SPECTRE}"; then
+        VS_WITHOUT_SPECTRE+="${VS_PATH}"$'\n'
+      fi
+    done < <( "${VSWHERE}" -products '*' -requires "${VC_TOOLS}" -property installationPath 2> /dev/null )
+    if [[ -z "${VS_WITHOUT_SPECTRE}" ]]; then
       ok "Spectre" "MSVC Spectre-mitigated libraries"
     else
-      VS_PATH="$( "${VSWHERE}" -products '*' -requires "${VC_TOOLS}" -property installationPath 2> /dev/null | head -1 | tr -d '\r' )"
-      fail "Spectre" "MSVC Spectre-mitigated libraries. Add them to your existing Visual Studio (from an admin PowerShell):"
-      echo "             & \"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe\" modify --installPath \"${VS_PATH}\" --add ${SPECTRE} --passive"
+      fail "Spectre" "MSVC Spectre-mitigated libraries. Add them to each Visual Studio below (from an admin PowerShell):"
+      while IFS= read -r VS_PATH; do
+        [[ -z "${VS_PATH}" ]] && continue
+        echo "             & \"C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\setup.exe\" modify --installPath \"${VS_PATH}\" --add ${SPECTRE} --passive"
+      done <<< "${VS_WITHOUT_SPECTRE}"
     fi
   else
     fail "C++ tools" "${VS_INSTALL}"
