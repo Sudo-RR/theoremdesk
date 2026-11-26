@@ -1,0 +1,14 @@
+{
+	"registry": "https://open-vsx.org",
+	"extensions": [
+		{ "id": "leanprover.lean4", "version": "0.0.243" },
+		{ "id": "James-Yu.latex-workshop", "version": "10.20.0" },
+		{ "id": "ms-python.python", "version": "2026.10.0" },
+		{ "id": "ms-python.debugpy", "version": "2026.6.0" },
+		{ "id": "ms-python.vscode-python-envs", "version": "1.44.0" },
+		{ "id": "detachhead.basedpyright", "version": "1.40.2" },
+		{ "id": "ms-toolsai.jupyter", "version": "2025.9.1" },
+		{ "id": "ms-toolsai.jupyter-renderers", "version": "1.3.0" },
+		{ "id": "jeanp413.open-remote-ssh", "version": "0.6.2" }
+	]
+}

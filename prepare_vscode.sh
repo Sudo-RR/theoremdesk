@@ -288,4 +288,10 @@ elif [[ "${OS_NAME}" == "windows" ]]; then
   sed -i 's|Microsoft Corporation|VSCodium|' build/win32/code.iss
 fi
 
+# TheoremDesk: apply the distribution layer. Keep this the only TheoremDesk
+# edit in this file, so merges from VSCodium stay clean.
+if [[ -f ../theoremdesk/prepare.sh ]]; then
+  . ../theoremdesk/prepare.sh
+fi
+
 cd ..

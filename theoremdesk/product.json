@@ -1,0 +1,30 @@
+{
+	"nameShort": "TheoremDesk",
+	"nameLong": "TheoremDesk",
+	"applicationName": "theoremdesk",
+	"dataFolderName": ".theoremdesk",
+	"linuxIconName": "theoremdesk",
+	"urlProtocol": "theoremdesk",
+	"serverApplicationName": "theoremdesk-server",
+	"serverDataFolderName": ".theoremdesk-server",
+	"tunnelApplicationName": "theoremdesk-tunnel",
+	"darwinBundleIdentifier": "org.theoremdesk.TheoremDesk",
+	"win32AppUserModelId": "TheoremDesk.TheoremDesk",
+	"win32DirName": "TheoremDesk",
+	"win32MutexName": "theoremdesk",
+	"win32NameVersion": "TheoremDesk",
+	"win32RegValueName": "TheoremDesk",
+	"win32ShellNameShort": "TheoremDesk",
+	"win32AppId": "{{4A4C0DA6-AB50-414E-8F44-95002F065F6D}",
+	"win32x64AppId": "{{48E272B2-F600-40C1-9CCA-14B7B6BE20AE}",
+	"win32arm64AppId": "{{A5805A1B-6D0B-4393-8924-EE9C25CEA82F}",
+	"win32UserAppId": "{{E68C78F6-26AA-408C-AB8E-432C4D16F536}",
+	"win32x64UserAppId": "{{4C2C9E3F-3300-4DE8-A8CE-C705ED020E23}",
+	"win32arm64UserAppId": "{{274E0CAB-5CBE-4FE0-BD4F-FCEA51EA38F2}",
+	"win32TunnelServiceMutex": "theoremdesk-tunnelservice",
+	"win32TunnelMutex": "theoremdesk-tunnel",
+	"win32ContextMenu": {
+		"x64": { "clsid": "FD376670-A646-4878-A07E-229E582DAE9B" },
+		"arm64": { "clsid": "6B563110-E1EA-4AC0-9B4D-EE47F3AA7DC6" }
+	}
+}
