@@ -217,13 +217,13 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 		}
 	}
 
-	async add(item: Item | undefined): Promise<void> {
+	async add(item: Item | undefined): Promise<boolean> {
 		if (item?.kind !== 'paper') {
-			return;
+			return false;
 		}
 		const bibFile = await chooseBibFile();
 		if (!bibFile) {
-			return;
+			return false;
 		}
 		const current = fs.existsSync(bibFile) ? fs.readFileSync(bibFile, 'utf8') : '';
 		// INSPIRE's own entry (with the key physicists use) when it has the paper.
@@ -245,6 +245,7 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 				? `Added to ${path.basename(bibFile)} as ${result.key}. \\cite{${result.key}} is on the clipboard.`
 				: `Already in ${path.basename(bibFile)} as ${result.key}. \\cite{${result.key}} is on the clipboard.`,
 		);
+		return result.added;
 	}
 
 	async copyCite(item: Item | undefined): Promise<void> {

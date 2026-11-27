@@ -7,6 +7,7 @@ import { newLatexDocument, openPendingDocument, setReferenceStyle } from './late
 import { LiteratureView, registerLiteratureMcpServer } from './literatureView';
 import { MutationView } from './mutation';
 import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
+import { LibraryView } from './libraryView';
 import { LocalAiService } from './localAiService';
 import { VerificationView } from './verify';
 
@@ -21,6 +22,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const verification = new VerificationView(context.asAbsolutePath(path.join('scripts', 'wsl-verify.sh')));
 	const mutations = new MutationView();
 	const literature = new LiteratureView();
+	let library: LibraryView | undefined;
 	registerLiteratureMcpServer(context);
 
 	context.subscriptions.push(
@@ -35,7 +37,12 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.window.registerTreeDataProvider('theoremdesk.literature', literature),
 		vscode.commands.registerCommand('theoremdesk.literature.search', () => literature.search()),
 		vscode.commands.registerCommand('theoremdesk.literature.recommend', () => literature.recommend()),
-		vscode.commands.registerCommand('theoremdesk.literature.add', (item) => literature.add(item)),
+		vscode.commands.registerCommand('theoremdesk.literature.add', async (item) => {
+			const added = await literature.add(item);
+			if (added && vscode.workspace.getConfiguration('theoremdesk.library').get('addCitedPapers', true)) {
+				void library?.addPaper(item, true);
+			}
+		}),
 		vscode.commands.registerCommand('theoremdesk.literature.copyCite', (item) => literature.copyCite(item)),
 		vscode.commands.registerCommand('theoremdesk.literature.open', (item) => literature.open(item)),
 		vscode.commands.registerCommand('theoremdesk.literature.chooseSources', () => literature.chooseSources()),
@@ -105,6 +112,21 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('theoremdesk.ai.stop', () => localAi.stop()),
 	);
 	void localAi.offerSmallModel();
+
+	// The literature database, searched and asked with the local models.
+	library = new LibraryView(context, localAi);
+	const lib = library;
+	context.subscriptions.push(
+		lib,
+		vscode.window.registerTreeDataProvider('theoremdesk.library', lib),
+		vscode.commands.registerCommand('theoremdesk.library.ask', () => lib.ask()),
+		vscode.commands.registerCommand('theoremdesk.library.search', () => lib.search()),
+		vscode.commands.registerCommand('theoremdesk.library.addBibliography', () => lib.addBibliography()),
+		vscode.commands.registerCommand('theoremdesk.library.addPdf', () => lib.addPdf()),
+		vscode.commands.registerCommand('theoremdesk.library.addPaper', (item) => lib.addPaper(item)),
+		vscode.commands.registerCommand('theoremdesk.library.remove', (item) => lib.remove(item)),
+		vscode.commands.registerCommand('theoremdesk.library.open', (item) => lib.open(item)),
+	);
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {
 		void context.globalState.update(GETTING_STARTED_SHOWN, true);

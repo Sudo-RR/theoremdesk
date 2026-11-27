@@ -2,12 +2,12 @@
 // model, the agent model answers and calls a tool when it should, and the
 // embedding model ranks a relevant passage above unrelated ones.
 //
-// Usage: node local_ai.js <extension out dir> <app resources dir>
+// Usage: node local_ai.js <extension out dir> <app resources dir> [python pdf_text.py file.pdf]
 // Prints one JSON object: { ok, steps: [{ name, ok, detail }] }.
 
 const path = require('path');
 
-const [out, resources] = process.argv.slice(2).map((p) => path.resolve(p));
+const [out, resources, python, script, pdf] = process.argv.slice(2).map((p, i) => (i === 2 ? p : path.resolve(p)));
 const { findLocalAi, LlamaServer, embeddingQuery } = require(path.join(out, 'llm.js'));
 
 const steps = [];
@@ -37,6 +37,30 @@ async function main() {
 		const scores = docs.map((d) => d.reduce((s, x, i) => s + x * q[i], 0));
 		const best = scores.indexOf(Math.max(...scores));
 		step('embeddings rank the relevant passage first', best === 0, `cosine ${scores.map((s) => s.toFixed(3)).join(', ')}; dimension ${q.length}`);
+
+		// The literature database: read a real PDF with the bundled Python,
+		// index it, and find the right passage by meaning.
+		if (pdf) {
+			const L = require(path.join(out, 'library.js'));
+			const os = require('os');
+			const fs = require('fs');
+			const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'td-library-'));
+			try {
+				const pages = await L.pdfPages(python, script, pdf);
+				const lib = new L.Library(dir);
+				const t = Date.now();
+				const entry = await lib.add({ title: 'Hamiltonian mechanics of the oscillator and pendulum', authors: ['TheoremDesk'], year: 2026, url: 'file:main.pdf' }, pages, client);
+				const reopened = new L.Library(dir);
+				const [hit] = await reopened.search('How does the period of a pendulum depend on a large amplitude?', client);
+				step(
+					'the literature database reads, indexes and searches a PDF',
+					entry.text === 'pdf' && hit && /elliptic/i.test(hit.chunk.text),
+					`${entry.pages} pages, ${entry.chunks} passages in ${((Date.now() - t) / 1000).toFixed(1)} s; best match (${hit?.score.toFixed(3)}, ${L.citeLabel(hit)}): "${hit?.chunk.text.replace(/\s+/g, ' ').slice(0, 90)}..."`,
+				);
+			} finally {
+				fs.rmSync(dir, { recursive: true, force: true });
+			}
+		}
 	} catch (error) {
 		step('the embedding model loads', false, String(error.message || error));
 	} finally {

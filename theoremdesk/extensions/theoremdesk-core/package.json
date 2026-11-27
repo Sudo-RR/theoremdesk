@@ -165,6 +165,48 @@
 				"title": "Stop the Local AI",
 				"category": "TheoremDesk",
 				"icon": "$(debug-stop)"
+			},
+			{
+				"command": "theoremdesk.library.ask",
+				"title": "Ask the Library...",
+				"category": "TheoremDesk",
+				"icon": "$(comment-discussion)"
+			},
+			{
+				"command": "theoremdesk.library.search",
+				"title": "Search the Library...",
+				"category": "TheoremDesk",
+				"icon": "$(search)"
+			},
+			{
+				"command": "theoremdesk.library.addBibliography",
+				"title": "Add the Bibliography to the Library",
+				"category": "TheoremDesk",
+				"icon": "$(references)"
+			},
+			{
+				"command": "theoremdesk.library.addPdf",
+				"title": "Add PDFs to the Library...",
+				"category": "TheoremDesk",
+				"icon": "$(file-pdf)"
+			},
+			{
+				"command": "theoremdesk.library.addPaper",
+				"title": "Add to Library",
+				"category": "TheoremDesk",
+				"icon": "$(library)"
+			},
+			{
+				"command": "theoremdesk.library.remove",
+				"title": "Remove from Library",
+				"category": "TheoremDesk",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "theoremdesk.library.open",
+				"title": "Open Paper",
+				"category": "TheoremDesk",
+				"icon": "$(link-external)"
 			}
 		],
 		"viewsContainers": {
@@ -193,6 +235,10 @@
 				{
 					"id": "theoremdesk.literature",
 					"name": "Literature"
+				},
+				{
+					"id": "theoremdesk.library",
+					"name": "Library"
 				}
 			]
 		},
@@ -212,6 +258,10 @@
 			{
 				"view": "theoremdesk.literature",
 				"contents": "Find papers on arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex, and add them to your bibliography in one click.\n[Recommend Papers for This Project](command:theoremdesk.literature.recommend)\n[Search Literature](command:theoremdesk.literature.search)\n[Choose Sources](command:theoremdesk.literature.chooseSources)"
+			},
+			{
+				"view": "theoremdesk.library",
+				"contents": "Your literature database, on this computer. Papers are read in full (their free PDF, else the abstract), so you can search them by meaning and ask questions answered with citations to the paper and page.\n[Add the Bibliography](command:theoremdesk.library.addBibliography)\n[Add PDFs](command:theoremdesk.library.addPdf)\nPapers you add to a .bib with + join the library automatically."
 			}
 		],
 		"menus": {
@@ -265,6 +315,26 @@
 					"command": "theoremdesk.literature.chooseSources",
 					"when": "view == theoremdesk.literature",
 					"group": "navigation@3"
+				},
+				{
+					"command": "theoremdesk.library.ask",
+					"when": "view == theoremdesk.library",
+					"group": "navigation@1"
+				},
+				{
+					"command": "theoremdesk.library.search",
+					"when": "view == theoremdesk.library",
+					"group": "navigation@2"
+				},
+				{
+					"command": "theoremdesk.library.addBibliography",
+					"when": "view == theoremdesk.library",
+					"group": "navigation@3"
+				},
+				{
+					"command": "theoremdesk.library.addPdf",
+					"when": "view == theoremdesk.library",
+					"group": "navigation@4"
 				}
 			],
 			"view/item/context": [
@@ -302,6 +372,21 @@
 					"command": "theoremdesk.literature.open",
 					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
 					"group": "1_paper@3"
+				},
+				{
+					"command": "theoremdesk.library.addPaper",
+					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
+					"group": "1_paper@4"
+				},
+				{
+					"command": "theoremdesk.library.remove",
+					"when": "view == theoremdesk.library && viewItem == libraryPaper",
+					"group": "inline"
+				},
+				{
+					"command": "theoremdesk.library.remove",
+					"when": "view == theoremdesk.library && viewItem == libraryPaper",
+					"group": "1_paper@1"
 				}
 			],
 			"commandPalette": [
@@ -323,6 +408,18 @@
 				},
 				{
 					"command": "theoremdesk.literature.open",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.library.addPaper",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.library.remove",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.library.open",
 					"when": "false"
 				}
 			],
@@ -521,6 +618,11 @@
 					"default": 15,
 					"minimum": 0,
 					"markdownDescription": "Stop a local model after this many minutes unused, to free its memory (0: never). It starts again when needed."
+				},
+				"theoremdesk.library.addCitedPapers": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "When you add a paper to a `.bib` from the Literature view, also read it into the library (its free PDF, else its abstract)."
 				}
 			}
 		}

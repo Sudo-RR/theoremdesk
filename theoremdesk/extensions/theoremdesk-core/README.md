@@ -106,6 +106,17 @@ Among models that fit a laptop, Qwen3.5-9B leads published maths and physics ben
 - **Smaller machines:** with less than 15 GB of memory, TheoremDesk offers Qwen3.5-4B once (3 GB, about twice as fast). **TheoremDesk: Download a Local AI Model** fetches it, resuming interrupted downloads and checking its SHA-256. Downloaded models live in TheoremDesk's data folder (`%LOCALAPPDATA%\TheoremDesk\models`), and **Choose the Local AI Model** switches between them.
 - **Privacy:** each model server listens only on 127.0.0.1, on a random port, with a random key, so other programs on the machine can't use it. Nothing leaves the machine.
 
+### The Library: your literature database
+
+The **Library** view (in the ⊢ sidebar) holds papers read in full, on your machine, shared by all your projects:
+
+- **Adding papers:** **+** in the Literature view adds a paper to your `.bib` and to the library (`theoremdesk.library.addCitedPapers`). **Add the Bibliography** reads every paper your `.bib` files cite by arXiv ID or DOI. **Add PDFs** takes local files. A paper's text comes from its free PDF (arXiv, or an open-access link), read with the bundled Python's `pypdf`; without one, its abstract is indexed instead, and the view says so.
+- **Indexing:** the text is split into passages of about 1,200 characters at sentence ends, overlapping slightly. Each is embedded with Qwen3-Embedding-0.6B, together with the paper's title and abstract. On a laptop with integrated graphics a 20-page paper takes about 30 seconds.
+- **Search the Library** finds passages by meaning, not keywords, at most three per paper, dropping passages far less relevant than the best. Picking one opens the paper at that page.
+- **Ask the Library** answers a question with the local agent model from the closest passages only. Every claim cites its source by number, and the answer lists each source with its paper and page, linked. If the sources don't answer the question, the answer says so. An answer citing a source it wasn't given is flagged.
+
+The library is stored in TheoremDesk's data folder (`library/`: `papers.json`, `chunks.jsonl`, `vectors.f32`), written atomically. Damaged files are set aside rather than silently lost.
+
 `src/llm.ts` starts the servers and is an OpenAI-compatible client (chat with tool calls, and embeddings), so a remote provider can be used the same way. The offline test (`tests/local_ai.js`) runs both models with the network cut: the agent must answer, and call a tool with valid arguments, and the embedding model must rank the relevant passage first.
 
 ## Developing

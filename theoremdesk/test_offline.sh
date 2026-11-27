@@ -289,7 +289,7 @@ check "BibTeX from arXiv, INSPIRE, zbMATH, Crossref and OpenAlex compiles with 7
 
 # --- The local AI: models load, answer, call tools, embed --------------------
 # Real inference with the bundled llama.cpp and models (tests/local_ai.js).
-"${NODE}" "${TD_DIR}/tests/local_ai.js" "${OUT}" "${RESOURCES}" > "${WORK}/local_ai.json" 2> "${WORK}/local_ai.err"
+"${NODE}" "${TD_DIR}/tests/local_ai.js" "${OUT}" "${RESOURCES}" "${PY}" "${OUT}/../scripts/pdf_text.py" "${WORK}/project/manuscript/main.pdf" > "${WORK}/local_ai.json" 2> "${WORK}/local_ai.err"
 while IFS=$'\t' read -r ok name detail; do
   if [[ "${ok}" == "True" ]]; then
     PASSED=$(( PASSED + 1 ))
@@ -300,16 +300,8 @@ while IFS=$'\t' read -r ok name detail; do
     echo "  FAIL  ${name}"
     printf '%s\n' "${detail}" | tail -15 | sed 's/^/        /'
   fi
-done < <( "${PY}" -c '
-import json, sys
-try:
-    r = json.load(open(sys.argv[1], encoding="utf-8"))
-except Exception as e:
-    print("False\tthe local AI test runs\t" + open(sys.argv[2], encoding="utf-8").read()[-1500:].replace("\n", " | "))
-    sys.exit()
-for s in r["steps"]:
-    print(str(s["ok"]) + "\t" + s["name"] + "\t" + str(s.get("detail", "")).replace("\t", " ").replace("\n", " | "))
-' "${WORK}/local_ai.json" "${WORK}/local_ai.err" | tr -d '\r' )
+done < <( { "${PY}" "${TD_DIR}/tests/report_steps.py" "${WORK}/local_ai.json" "${WORK}/local_ai.err" 7 ||
+  printf 'False\tthe local AI results are reported\treport_steps.py failed\n'; } | tr -d '\r' )
 
 echo
 echo "TheoremDesk offline test: ${PASSED} passed, ${FAILED} failed"
