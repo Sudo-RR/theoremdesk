@@ -4,6 +4,7 @@ Built into TheoremDesk. It adds:
 
 - **TheoremDesk: New Research Project...** (also under File → New File...), which creates a project from a template in `templates/`.
 - The **Get started with TheoremDesk** walkthrough, opened on first launch.
+- **Literature**: arXiv search and recommendations for the open project, Add to bibliography, and a literature MCP server for agents (see below).
 - The **Environment** view (⊢ icon in the activity bar) and status bar item. They check Git, Python, Lean (elan), TeX and Windows long-path support, plus the open project's `.venv`, Lean version, prebuilt Mathlib and Lean build. Each problem has a one-click fix that runs in its own terminal. The checks live in `src/checks.ts` and don't use the VS Code API, so they're tested against a fake machine.
 - Research defaults: basedpyright as the Python language server (`python.languageServer: None`).
 
@@ -40,6 +41,41 @@ Statement mutants that only make the statement weaker are skipped, because the o
 Each mutant is **killed** (a proof broke), **survived**, **stillborn** (the mutant itself doesn't elaborate), or **timed out**. Survivors appear in the **Mutations** view and as warnings in the editor at the exact spot; click one to compare the mutant with your file. Theorems proved by `sorry` can't catch anything, so they're skipped and listed.
 
 The file must compile first; build the project (`lake build`) before testing. Prior art: [Mutate.lean](https://github.com/jubnzv/Mutate.lean) (definitions; no licence, so not bundled), [Specmut](https://github.com/TylerRector/Specmut) and [lean-audit](https://github.com/Futlas/lean-audit) (statements).
+
+## Literature: arXiv search, recommendations, Add to bibliography
+
+The **Literature** view (in the ⊢ sidebar):
+
+- **Recommend Papers for This Project** reads the open manuscript (its title and abstract count most, then the text and the titles already in the `.bib`), searches arXiv for its main terms, ranks the results by text similarity (TF-IDF), and leaves out papers already in the bibliography.
+- **Search arXiv** takes plain words (all must appear, "quoted phrases" stay together) or arXiv syntax (`au:`, `ti:`, `abs:`, `cat:`, `AND`, `OR`).
+- Hover a paper for its abstract; click to open it on arXiv. **+** adds it to the project's `.bib` (asking which one if there are several, or offering to create `references.bib`) and puts `\cite{key}` on the clipboard. Papers already cited show a tick and their key, matched by arXiv ID or DOI.
+
+Entries follow arXiv's recommended form (`eprint`, `archivePrefix`, `primaryClass`, plus `doi` and the journal reference when published), with accented names converted to LaTeX so `pdflatex` handles them. The offline test compiles entries made from real arXiv data with plain, unsrtnat, apsrev4-2 and IEEEtran.
+
+Requests go only to arXiv's public API (`export.arxiv.org`), at most one every three seconds as arXiv asks. A recommendation sends arXiv a handful of the manuscript's most frequent words, never the manuscript.
+
+The engine (`src/literature.ts`) defines a `LiteratureSource` interface; arXiv is the first source, and Semantic Scholar, PubMed and journal sources can be added alongside it.
+
+### The literature MCP server
+
+The same tools are an MCP server, `out/mcp/literatureServer.js` (stdio, no dependencies):
+
+| Tool | Does |
+|---|---|
+| `search_arxiv` | Search arXiv (query, max_results, category, sort) |
+| `recommend_papers` | Recommend papers for a `.tex` file or a description, skipping those in a `.bib` |
+| `get_bibtex` | The BibTeX entry for an arXiv ID or link |
+| `add_to_bibliography` | Add a paper to a `.bib` file (once) and return the key to cite |
+
+Inside TheoremDesk it's offered to agents automatically ("TheoremDesk Literature (arXiv)"). Other agents can run it with TheoremDesk's own runtime, so no separate Node is needed; for example, in an MCP client's configuration:
+
+```json
+{
+  "command": "C:\\path\\to\\TheoremDesk\\TheoremDesk.exe",
+  "args": ["C:\\path\\to\\TheoremDesk\\resources\\app\\extensions\\theoremdesk.theoremdesk-core\\out\\mcp\\literatureServer.js"],
+  "env": { "ELECTRON_RUN_AS_NODE": "1" }
+}
+```
 
 ## Developing
 

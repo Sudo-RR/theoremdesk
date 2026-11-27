@@ -105,6 +105,36 @@
 				"title": "Reference Style for a Journal...",
 				"category": "TheoremDesk",
 				"icon": "$(book)"
+			},
+			{
+				"command": "theoremdesk.literature.search",
+				"title": "Search arXiv...",
+				"category": "TheoremDesk",
+				"icon": "$(search)"
+			},
+			{
+				"command": "theoremdesk.literature.recommend",
+				"title": "Recommend Papers for This Project",
+				"category": "TheoremDesk",
+				"icon": "$(sparkle)"
+			},
+			{
+				"command": "theoremdesk.literature.add",
+				"title": "Add to Bibliography",
+				"category": "TheoremDesk",
+				"icon": "$(add)"
+			},
+			{
+				"command": "theoremdesk.literature.copyCite",
+				"title": "Copy cite{...}",
+				"category": "TheoremDesk",
+				"icon": "$(copy)"
+			},
+			{
+				"command": "theoremdesk.literature.open",
+				"title": "Open on arXiv",
+				"category": "TheoremDesk",
+				"icon": "$(link-external)"
 			}
 		],
 		"viewsContainers": {
@@ -129,6 +159,10 @@
 				{
 					"id": "theoremdesk.mutations",
 					"name": "Mutations"
+				},
+				{
+					"id": "theoremdesk.literature",
+					"name": "Literature"
 				}
 			]
 		},
@@ -144,6 +178,10 @@
 			{
 				"view": "theoremdesk.mutations",
 				"contents": "Check that your Lean code verifies what you meant. TheoremDesk makes small changes (mutants) to the open file, then compiles each one:\n- a changed definition (cos → sin, + → -, 2 → 3) should make some theorem fail\n- a changed statement (a hypothesis dropped, < → ≤) should break its proof\nMutants that survive show where your theorems don't pin down what you intended.\n[Mutation Test This File](command:theoremdesk.mutationTest)"
+			},
+			{
+				"view": "theoremdesk.literature",
+				"contents": "Find papers on arXiv and add them to your bibliography in one click.\n[Recommend Papers for This Project](command:theoremdesk.literature.recommend)\n[Search arXiv](command:theoremdesk.literature.search)"
 			}
 		],
 		"menus": {
@@ -182,6 +220,16 @@
 					"command": "theoremdesk.mutationTest",
 					"when": "view == theoremdesk.mutations",
 					"group": "navigation"
+				},
+				{
+					"command": "theoremdesk.literature.search",
+					"when": "view == theoremdesk.literature",
+					"group": "navigation@1"
+				},
+				{
+					"command": "theoremdesk.literature.recommend",
+					"when": "view == theoremdesk.literature",
+					"group": "navigation@2"
 				}
 			],
 			"view/item/context": [
@@ -189,6 +237,36 @@
 					"command": "theoremdesk.environment.fix",
 					"when": "view == theoremdesk.environment && viewItem == fixable",
 					"group": "inline"
+				},
+				{
+					"command": "theoremdesk.literature.add",
+					"when": "view == theoremdesk.literature && viewItem == paper",
+					"group": "inline@1"
+				},
+				{
+					"command": "theoremdesk.literature.copyCite",
+					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
+					"group": "inline@2"
+				},
+				{
+					"command": "theoremdesk.literature.open",
+					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
+					"group": "inline@3"
+				},
+				{
+					"command": "theoremdesk.literature.add",
+					"when": "view == theoremdesk.literature && viewItem == paper",
+					"group": "1_paper@1"
+				},
+				{
+					"command": "theoremdesk.literature.copyCite",
+					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
+					"group": "1_paper@2"
+				},
+				{
+					"command": "theoremdesk.literature.open",
+					"when": "view == theoremdesk.literature && viewItem =~ /^paper/",
+					"group": "1_paper@3"
 				}
 			],
 			"commandPalette": [
@@ -198,6 +276,18 @@
 				},
 				{
 					"command": "theoremdesk.mutations.showDiff",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.literature.add",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.literature.copyCite",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.literature.open",
 					"when": "false"
 				}
 			],
@@ -335,6 +425,12 @@
 				"label": "TheoremDesk Light",
 				"uiTheme": "vs",
 				"path": "./themes/theoremdesk-light.json"
+			}
+		],
+		"mcpServerDefinitionProviders": [
+			{
+				"id": "theoremdesk.literature",
+				"label": "TheoremDesk Literature (arXiv)"
 			}
 		]
 	},

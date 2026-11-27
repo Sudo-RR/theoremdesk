@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/VO5tof/T0fZZx3dIB8/Tm5Q012U</id>
+  <title>arXiv Query: search_query=all:hamiltonian AND all:pendulum&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-11-27T16:36:19Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:hamiltonian+AND+all:pendulum&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>219</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/1104.0312v2</id>
+    <title>Non-integrability Criterium for Normal Variational Equations around an integrable Subsystem and an example: The Wilbeforce spring-pendulum</title>
+    <updated>2012-02-27T22:31:27Z</updated>
+    <link href="https://arxiv.org/abs/1104.0312v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1104.0312v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In this paper we analyze the non-integrability of the Wilbeforce pendulum by means of Morales-Ramis theory in where is enough to prove that the Galois group of the variational equation is not virtually abelian. We obtain these non-integrability results due to the algebrization of the variational equation falls into a Heun differential equation with four singularities and then we apply Kovacic's algorithm to determine its non-integrability.</summary>
+    <category term="math.DS" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="math-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2011-04-02T13:21:18Z</published>
+    <arxiv:comment>23 pages, 1 figure. Keywords and Phrases. Algebrization, Kovacic's algorithm, Hamiltonian systems, Wilbeforce pendulum, Differential Galois Group</arxiv:comment>
+    <arxiv:primary_category term="math.DS"/>
+    <author>
+      <name>Primitivo B. Acosta-Humánez</name>
+    </author>
+    <author>
+      <name>Martha Alvarez--Ramírez</name>
+    </author>
+    <author>
+      <name>David Blázquez-Sanz</name>
+    </author>
+    <author>
+      <name>Joaquín Delgado</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2406.02200v2</id>
+    <title>Dynamics and non-integrability of the double spring pendulum</title>
+    <updated>2024-06-05T06:21:45Z</updated>
+    <link href="https://arxiv.org/abs/2406.02200v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2406.02200v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper investigates the dynamics and integrability of the double spring pendulum, which has great importance in studying nonlinear dynamics, chaos, and bifurcations. Being a Hamiltonian system with three degrees of freedom, its analysis presents a significant challenge. To gain insight into the system's dynamics, we employ various numerical methods, including Lyapunov exponents spectra, phase-parametric diagrams, and Poincaré cross-sections. The novelty of our work lies in the integration of these three numerical methods into one powerful tool. We provide a comprehensive understanding of the system's dynamics by identifying parameter values or initial conditions that lead to hyper-chaotic, chaotic, quasi-periodic, and periodic motion, which is a novel contribution in the context of Hamiltonian systems. In the absence of gravitational potential, the system exhibits $S^1$ symmetry, and the presence of an additional first integral was identified using Lyapunov exponents diagrams. We demonstrate the effective utilisation of Lyapunov exponents as a potential indicator of first integrals and integrable dynamics. The numerical analysis is complemented by an analytical proof regarding the non-integrability of the system. This proof relies on the analysis of properties of the differential Galois group of variational equations along specific solutions of the system. To facilitate this analysis, we utilised a newly developed extension of the Kovacic algorithm specifically designed for fourth-order differential equations. Overall, our study sheds light on the intricate dynamics and integrability of the double spring pendulum, offering new insights and methodologies for further research in this field.</summary>
+    <category term="nlin.CD" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-06-04T10:56:30Z</published>
+    <arxiv:comment>34 pages, 19 figures</arxiv:comment>
+    <arxiv:primary_category term="nlin.CD"/>
+    <arxiv:journal_ref>W. Szumiński, A.~J. Maciejewski, Dynamics and non-integrability of the double spring pendulum, J. Sound Vib., 589:118550, 2024</arxiv:journal_ref>
+    <author>
+      <name>Wojciech Szumiński</name>
+    </author>
+    <author>
+      <name>Andrzej J. Maciejewski</name>
+    </author>
+    <arxiv:doi>10.1016/j.jsv.2024.118550</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1016/j.jsv.2024.118550" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.21123v1</id>
+    <title>Dynamics and non-integrability of the variable-length double pendulum: exploring chaos and periodicity via the Lyapunov refined maps</title>
+    <updated>2026-02-24T17:22:03Z</updated>
+    <link href="https://arxiv.org/abs/2602.21123v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.21123v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper extends our previous work~(Szumiński and Maciejewski, 2024), where we explored the dynamics and integrability of the double-spring pendulum. Here, we investigate the variable-length double pendulum, a three-degree-of-freedom Hamiltonian system combining features of the classic double pendulum and the swinging Atwood machine. With its intricate dynamics, this system is crucial for studying nonlinear phenomena such as high-order resonances, chaos, and bifurcations. We address the challenges posed by high-dimensional phase spaces using a novel tool, the \textit{Lyapunov refined maps}, which integrates Poincaré sections, phase-parametric diagrams, and Lyapunov exponents. This framework comprehensively analyzes periodic, quasi-periodic, and chaotic behaviors. By measuring the strength of chaos, it also offers insights into the system's dynamical structure. Additionally, we apply Morales-Ramis theory to examine integrability, leveraging the differential Galois group of variational equations to establish non-integrability conditions. The Kovacic algorithm is used to analyze the solvability of higher-dimensional differential equations, complemented by Lyapunov exponent diagrams to exclude integrable dynamics under certain parameters. Our findings advance the fundamental understanding of variable-length pendulum dynamics, offering new insights and methodologies for further research with potential applications in adaptive robotics, energy harvesting, and biomechanics. Additionally, this work represents a significant step toward proving the long-sought non-integrability of the classical double pendulum.</summary>
+    <category term="nlin.CD" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-02-24T17:22:03Z</published>
+    <arxiv:primary_category term="nlin.CD"/>
+    <arxiv:journal_ref>Wojciech Szumiński and Tomasz Kapitaniak, Dynamics and non-integrability of the variable-length double pendulum: exploring chaos and periodicity via the Lyapunov refined maps, J. Sound Vib., Volume 611, 1 September 2025, 119099</arxiv:journal_ref>
+    <author>
+      <name>Wojciech Szumiński</name>
+    </author>
+    <author>
+      <name>Tomasz Kapitaniak</name>
+    </author>
+    <arxiv:doi>10.1016/j.jsv.2025.119099</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.1016/j.jsv.2025.119099" title="doi"/>
+  </entry>
+</feed>

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
 import { newLatexDocument, openPendingDocument, setReferenceStyle } from './latex';
+import { LiteratureView, registerLiteratureMcpServer } from './literatureView';
 import { MutationView } from './mutation';
 import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
 import { VerificationView } from './verify';
@@ -18,6 +19,8 @@ export function activate(context: vscode.ExtensionContext): void {
 	const environment = new EnvironmentView(context.asAbsolutePath(path.join('scripts', 'wsl-setup.sh')));
 	const verification = new VerificationView(context.asAbsolutePath(path.join('scripts', 'wsl-verify.sh')));
 	const mutations = new MutationView();
+	const literature = new LiteratureView();
+	registerLiteratureMcpServer(context);
 
 	context.subscriptions.push(
 		mutations,
@@ -27,6 +30,13 @@ export function activate(context: vscode.ExtensionContext): void {
 		environment,
 		vscode.window.registerTreeDataProvider('theoremdesk.environment', environment),
 		vscode.window.registerTreeDataProvider('theoremdesk.verification', verification),
+		literature,
+		vscode.window.registerTreeDataProvider('theoremdesk.literature', literature),
+		vscode.commands.registerCommand('theoremdesk.literature.search', () => literature.search()),
+		vscode.commands.registerCommand('theoremdesk.literature.recommend', () => literature.recommend()),
+		vscode.commands.registerCommand('theoremdesk.literature.add', (item) => literature.add(item)),
+		vscode.commands.registerCommand('theoremdesk.literature.copyCite', (item) => literature.copyCite(item)),
+		vscode.commands.registerCommand('theoremdesk.literature.open', (item) => literature.open(item)),
 		vscode.commands.registerCommand('theoremdesk.newLatexDocument', () => newLatexDocument(context)),
 		vscode.commands.registerCommand('theoremdesk.setReferenceStyle', () => setReferenceStyle(context)),
 		vscode.commands.registerCommand('theoremdesk.leanBuild', () => verification.buildProject()),

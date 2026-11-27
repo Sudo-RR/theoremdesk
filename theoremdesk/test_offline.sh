@@ -249,6 +249,26 @@ styles_bundled() {
 }
 check "every reference style TheoremDesk recommends is bundled" styles_bundled
 
+# --- BibTeX from arXiv (as Add to Bibliography writes it) compiles ---------
+arxiv_bibtex_compiles() {
+  local dir="${WORK}/arxiv-bib" fixtures="${TD_DIR}/extensions/theoremdesk-core/test/fixtures" style
+  mkdir -p "${dir}" && cd "${dir}" || return 1
+  "${NODE}" -e '
+    const L = require(process.argv[1]); const fs = require("fs"); let bib = "";
+    for (const f of process.argv.slice(2)) for (const p of L.parseArxivAtom(fs.readFileSync(f, "utf8"))) bib = L.addToBib(bib, p).text;
+    fs.writeFileSync("refs.bib", bib);' "${OUT}/literature.js" "${fixtures}/arxiv-search.xml" "${fixtures}/arxiv-ids.xml" || return 1
+  for style in plain unsrtnat apsrev4-2 IEEEtran; do
+    printf '%s\n' '\documentclass{article}' '\usepackage[numbers]{natbib}' '\usepackage{url}' '\begin{document}' \
+      '\nocite{*}' "\\bibliographystyle{${style}}" '\bibliography{refs}' '\end{document}' > "${style}.tex"
+    pdflatex -interaction=nonstopmode -halt-on-error "${style}" > /dev/null 2>&1 || { echo "${style}: pdflatex failed"; return 1; }
+    bibtex "${style}" > "${style}.bibtex.txt" 2>&1 || { echo "${style}: bibtex failed"; cat "${style}.bibtex.txt"; return 1; }
+    pdflatex -interaction=nonstopmode -halt-on-error "${style}" > /dev/null 2>&1 || { echo "${style}: pdflatex failed"; grep -m1 -A3 '^!' "${style}.log"; return 1; }
+    if grep -E 'Undefined control sequence|Unicode character|Missing character' "${style}.log"; then return 1; fi
+    [[ "$( grep -c '\\bibitem' "${style}.bbl" )" -ge 5 ]] || { echo "${style}: expected 5 entries"; return 1; }
+  done
+}
+check "BibTeX from arXiv compiles with plain, unsrtnat, apsrev4-2 and IEEEtran" arxiv_bibtex_compiles
+
 echo
 echo "TheoremDesk offline test: ${PASSED} passed, ${FAILED} failed"
 [[ "${FAILED}" -eq 0 ]]
