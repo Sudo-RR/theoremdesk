@@ -7,6 +7,7 @@ import { newLatexDocument, openPendingDocument, setReferenceStyle } from './late
 import { LiteratureView, registerLiteratureMcpServer } from './literatureView';
 import { MutationView } from './mutation';
 import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
+import { LocalAiService } from './localAiService';
 import { VerificationView } from './verify';
 
 const WALKTHROUGH_ID = 'gettingStarted';
@@ -91,6 +92,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		.catch((error) => log.appendLine(`Setting up the built-in toolchain failed: ${(error as Error).stack ?? error}`))
 		.then(() => environment.refresh())
 		.then(() => offerProjectSetup(environment));
+
+	// The local AI: models start when first used.
+	const aiLog = vscode.window.createOutputChannel('TheoremDesk Local AI');
+	const localAi = new LocalAiService(context, aiLog);
+	context.subscriptions.push(
+		aiLog,
+		localAi,
+		vscode.commands.registerCommand('theoremdesk.ai.status', () => localAi.showStatus()),
+		vscode.commands.registerCommand('theoremdesk.ai.chooseModel', () => localAi.chooseModel()),
+		vscode.commands.registerCommand('theoremdesk.ai.downloadModel', () => localAi.download()),
+		vscode.commands.registerCommand('theoremdesk.ai.stop', () => localAi.stop()),
+	);
+	void localAi.offerSmallModel();
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {
 		void context.globalState.update(GETTING_STARTED_SHOWN, true);

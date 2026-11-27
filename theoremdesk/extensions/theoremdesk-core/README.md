@@ -89,6 +89,25 @@ Inside TheoremDesk it's offered to agents automatically ("TheoremDesk Literature
 }
 ```
 
+## Local AI
+
+TheoremDesk ships with its own AI that runs on your machine, offline and free:
+
+| | Model | Size | Licence |
+|---|---|---|---|
+| Agent | Qwen3.5-9B (Q4_K_M) | 5.7 GB | Apache 2.0 |
+| Literature database (embeddings) | Qwen3-Embedding-0.6B (Q8_0) | 0.6 GB | Apache 2.0 |
+| Runtime | llama.cpp `llama-server` b12774 (v1.1.0), Vulkan + CPU | 40 MB | MIT |
+
+Among models that fit a laptop, Qwen3.5-9B leads published maths and physics benchmarks: GPQA Diamond 81.7, HMMT 83, and 75% on a benchmark of PhD-qualifying-exam physics problems (arXiv 2503.21821), close to Gemma 4 31B at a third of the size.
+
+- **When it runs:** each model starts the first time something needs it and stops after `theoremdesk.ai.idleMinutes` (default 15) unused, freeing its memory. The status bar shows what's running and on which device; click it to start, stop or switch models.
+- **Hardware:** the Vulkan build uses any GPU (NVIDIA, AMD, Intel, including integrated graphics) and falls back to the CPU. As a guide, a Core Ultra 7 155U laptop with integrated graphics generates about 5 tokens a second with the 9B.
+- **Smaller machines:** with less than 15 GB of memory, TheoremDesk offers Qwen3.5-4B once (3 GB, about twice as fast). **TheoremDesk: Download a Local AI Model** fetches it, resuming interrupted downloads and checking its SHA-256. Downloaded models live in TheoremDesk's data folder (`%LOCALAPPDATA%\TheoremDesk\models`), and **Choose the Local AI Model** switches between them.
+- **Privacy:** each model server listens only on 127.0.0.1, on a random port, with a random key, so other programs on the machine can't use it. Nothing leaves the machine.
+
+`src/llm.ts` starts the servers and is an OpenAI-compatible client (chat with tool calls, and embeddings), so a remote provider can be used the same way. The offline test (`tests/local_ai.js`) runs both models with the network cut: the agent must answer, and call a tool with valid arguments, and the embedding model must rank the relevant passage first.
+
 ## Developing
 
 ```bash

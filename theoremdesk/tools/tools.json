@@ -25,6 +25,23 @@
 			"version": "2.56.1 (MinGit)",
 			"url": "https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/MinGit-2.56.1-64-bit.zip",
 			"sha256": "4a92850b6e917da4fd010669b614b55dccf5b0ec333a534cc4be4700dfefdafd"
+		},
+		"llama": {
+			"version": "llama.cpp b12774 (v1.1.0), Vulkan + CPU",
+			"url": "https://github.com/ggml-org/llama.cpp/releases/download/b12774/llama-b12774-bin-win-vulkan-x64.zip",
+			"sha256": "d29a16265d26ef7598209caaf1a544cbfa6abe2858c24b0ce4ae6bff87a76f22"
+		},
+		"chat-model": {
+			"version": "Qwen3.5-9B Q4_K_M (unsloth/Qwen3.5-9B-GGUF@3885219, Apache-2.0)",
+			"file": "Qwen3.5-9B-Q4_K_M.gguf",
+			"url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/3885219b6810b007914f3a7950a8d1b469d598a5/Qwen3.5-9B-Q4_K_M.gguf",
+			"sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+		},
+		"embedding-model": {
+			"version": "Qwen3-Embedding-0.6B Q8_0 (Qwen/Qwen3-Embedding-0.6B-GGUF@370f27d, Apache-2.0)",
+			"file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+			"url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/370f27d7550e0def9b39c1f16d3fbaa13aa67728/Qwen3-Embedding-0.6B-Q8_0.gguf",
+			"sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439"
 		}
 	},
 	"linux-x64": {
@@ -48,6 +65,28 @@
 			"toolchain": "leanprover/lean4:v4.36.0",
 			"url": "https://github.com/leanprover/lean4/releases/download/v4.36.0/lean-4.36.0-linux.tar.zst",
 			"sha256": "2b7ab1ed8b92d2e6abfaf41344823b510064dbc9c0260cac73eb496ab2dea6eb"
+		},
+		"llama": {
+			"version": "llama.cpp b12774 (v1.1.0), Vulkan + CPU",
+			"url": "https://github.com/ggml-org/llama.cpp/releases/download/b12774/llama-b12774-bin-ubuntu-vulkan-x64.tar.gz",
+			"sha256": "75b7044df1232bd5bc78ffc753f14a5a44d9f3b5c67228b6103705c57084d02d"
+		},
+		"chat-model": {
+			"version": "Qwen3.5-9B Q4_K_M (unsloth/Qwen3.5-9B-GGUF@3885219, Apache-2.0)",
+			"file": "Qwen3.5-9B-Q4_K_M.gguf",
+			"url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/3885219b6810b007914f3a7950a8d1b469d598a5/Qwen3.5-9B-Q4_K_M.gguf",
+			"sha256": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+		},
+		"embedding-model": {
+			"version": "Qwen3-Embedding-0.6B Q8_0 (Qwen/Qwen3-Embedding-0.6B-GGUF@370f27d, Apache-2.0)",
+			"file": "Qwen3-Embedding-0.6B-Q8_0.gguf",
+			"url": "https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/370f27d7550e0def9b39c1f16d3fbaa13aa67728/Qwen3-Embedding-0.6B-Q8_0.gguf",
+			"sha256": "06507c7b42688469c4e7298b0a1e16deff06caf291cf0a5b278c308249c3e439"
+		},
+		"libgomp": {
+			"version": "libgomp1 12.3.0-1ubuntu1~22.04.3 (Ubuntu 22.04, GCC runtime library exception)",
+			"url": "https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-12/libgomp1_12.3.0-1ubuntu1~22.04.3_amd64.deb",
+			"sha256": "870c27299185a5dd4accad3b15bf82a7409fd7073cccaa8025875307da4d0ce2"
 		}
 	}
 }

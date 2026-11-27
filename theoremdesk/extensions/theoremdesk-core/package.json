@@ -141,6 +141,30 @@
 				"title": "Choose Literature Sources...",
 				"category": "TheoremDesk",
 				"icon": "$(filter)"
+			},
+			{
+				"command": "theoremdesk.ai.status",
+				"title": "Local AI...",
+				"category": "TheoremDesk",
+				"icon": "$(hubot)"
+			},
+			{
+				"command": "theoremdesk.ai.chooseModel",
+				"title": "Choose the Local AI Model...",
+				"category": "TheoremDesk",
+				"icon": "$(arrow-swap)"
+			},
+			{
+				"command": "theoremdesk.ai.downloadModel",
+				"title": "Download a Local AI Model...",
+				"category": "TheoremDesk",
+				"icon": "$(cloud-download)"
+			},
+			{
+				"command": "theoremdesk.ai.stop",
+				"title": "Stop the Local AI",
+				"category": "TheoremDesk",
+				"icon": "$(debug-stop)"
 			}
 		],
 		"viewsContainers": {
@@ -475,6 +499,28 @@
 						"openalex"
 					],
 					"markdownDescription": "Where Literature search and recommendations look. Results from several sources are merged: a paper appears once, with its arXiv abstract, its journal details and its INSPIRE key."
+				},
+				"theoremdesk.ai.localModel": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "The local model the agent uses: empty for the built-in Qwen3.5-9B, or the file name of a downloaded model (see **TheoremDesk: Choose the Local AI Model**)."
+				},
+				"theoremdesk.ai.contextTokens": {
+					"type": "number",
+					"default": 32768,
+					"minimum": 4096,
+					"markdownDescription": "How much text (in tokens) the local agent model can take in at once. Larger needs more memory."
+				},
+				"theoremdesk.ai.useGpu": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "Run the local models on the GPU when there is one (NVIDIA, AMD or Intel, through Vulkan). They fall back to the CPU otherwise."
+				},
+				"theoremdesk.ai.idleMinutes": {
+					"type": "number",
+					"default": 15,
+					"minimum": 0,
+					"markdownDescription": "Stop a local model after this many minutes unused, to free its memory (0: never). It starts again when needed."
 				}
 			}
 		}

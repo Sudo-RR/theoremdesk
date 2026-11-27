@@ -37,12 +37,18 @@ TEMPLATE="${TD_DIR}/extensions/theoremdesk-core/templates/hamiltonian"
 if [[ -z "${TD_OFFLINE:-}" && "${OSTYPE}" == linux* ]] && command -v unshare > /dev/null; then
   exec env TD_OFFLINE=netns unshare -rn bash "$0" "$@"
 fi
+if [[ "${TD_OFFLINE:-}" == "netns" ]]; then
+  # A new network namespace starts with even loopback down. An offline
+  # machine still has loopback, and the local AI's servers listen on it.
+  ip link set lo up 2> /dev/null || echo "TheoremDesk offline test: couldn't bring up loopback (no ip command?)"
+fi
 if [[ -z "${TD_OFFLINE:-}" ]]; then
   export TD_OFFLINE=proxy
   for v in HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy; do
     export "${v}=http://127.0.0.1:9"
   done
-  export NO_PROXY="" no_proxy=""
+  # Everything goes to a dead proxy, except this machine itself (the local AI).
+  export NO_PROXY="127.0.0.1,localhost" no_proxy="127.0.0.1,localhost"
 fi
 export PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 
@@ -280,6 +286,30 @@ literature_bibtex_compiles() {
   done
 }
 check "BibTeX from arXiv, INSPIRE, zbMATH, Crossref and OpenAlex compiles with 7 styles" literature_bibtex_compiles
+
+# --- The local AI: models load, answer, call tools, embed --------------------
+# Real inference with the bundled llama.cpp and models (tests/local_ai.js).
+"${NODE}" "${TD_DIR}/tests/local_ai.js" "${OUT}" "${RESOURCES}" > "${WORK}/local_ai.json" 2> "${WORK}/local_ai.err"
+while IFS=$'\t' read -r ok name detail; do
+  if [[ "${ok}" == "True" ]]; then
+    PASSED=$(( PASSED + 1 ))
+    echo "  ok    ${name}"
+    echo "        ${detail}"
+  else
+    FAILED=$(( FAILED + 1 ))
+    echo "  FAIL  ${name}"
+    printf '%s\n' "${detail}" | tail -15 | sed 's/^/        /'
+  fi
+done < <( "${PY}" -c '
+import json, sys
+try:
+    r = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception as e:
+    print("False\tthe local AI test runs\t" + open(sys.argv[2], encoding="utf-8").read()[-1500:].replace("\n", " | "))
+    sys.exit()
+for s in r["steps"]:
+    print(str(s["ok"]) + "\t" + s["name"] + "\t" + str(s.get("detail", "")).replace("\t", " ").replace("\n", " | "))
+' "${WORK}/local_ai.json" "${WORK}/local_ai.err" | tr -d '\r' )
 
 echo
 echo "TheoremDesk offline test: ${PASSED} passed, ${FAILED} failed"

@@ -1,0 +1,15 @@
+{
+	"note": "Models TheoremDesk offers to download, besides the bundled Qwen3.5-9B and Qwen3-Embedding-0.6B. Each is pinned to a commit and checked against its SHA-256.",
+	"downloads": [
+		{
+			"id": "qwen3.5-4b",
+			"name": "Qwen3.5-4B (Q4_K_M)",
+			"description": "About twice as fast as the bundled 9B; for machines with less than 16 GB of memory. Apache-2.0.",
+			"file": "Qwen3.5-4B-Q4_K_M.gguf",
+			"url": "https://huggingface.co/ggml-org/Qwen3.5-4B-GGUF/resolve/8d43d974efc48399cb58957ad49c8b26bf5a109c/Qwen3.5-4B-Q4_K_M.gguf",
+			"sha256": "217002fa8008ef4fc6d548353a3aebef055a96e6ff8e0e2c0953ef8254a89c14",
+			"size": 3032091584,
+			"minMemoryGB": 6
+		}
+	]
+}

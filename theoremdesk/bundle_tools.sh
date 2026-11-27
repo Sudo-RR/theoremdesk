@@ -13,6 +13,9 @@
 #                              links the toolchain into its own elan home on
 #                              first launch
 #   resources/tools/git        Git for Windows (MinGit); Lake uses Git
+#   resources/tools/ai         llama.cpp (llama-server) and the local models:
+#                              Qwen3.5-9B for the agent, Qwen3-Embedding-0.6B
+#                              for the literature database
 #
 # Every download is pinned in tools/tools.json and checked against its
 # SHA-256. Downloads are cached in theoremdesk/.cache/tools.
@@ -92,12 +95,17 @@ fetch() { # fetch <tool>  ->  prints the cached file path
   echo "${file}"
 }
 
+# TD_BUNDLE_ONLY="ai" (or "python tex lean git ai") bundles just those parts
+# into an app that already has the rest; by default everything is bundled.
+want() { [[ -z "${TD_BUNDLE_ONLY:-}" || " ${TD_BUNDLE_ONLY} " == *" $1 "* ]]; }
+
 fresh() { # fresh <dir>: remove and recreate
   rm -rf "${1:?}"
   mkdir -p "$1"
 }
 
 # --- Python ---------------------------------------------------------------
+if want python; then
 PYTHON_ARCHIVE="$( fetch python )"
 echo "TheoremDesk: unpacking Python"
 fresh "${DEST}/python"
@@ -110,8 +118,10 @@ echo "TheoremDesk: installing Python packages"
 "${PYTHON}" -m pip install --quiet --disable-pip-version-check --no-warn-script-location \
   -r "${TD_DIR}/tools/python-requirements.lock"
 "${PYTHON}" -c 'import sympy, numpy, scipy, matplotlib, plotly, ipykernel; print("Python packages import")'
+fi
 
 # --- TeX ------------------------------------------------------------------
+if want tex; then
 TEX_ARCHIVE="$( fetch tinytex )"
 echo "TheoremDesk: unpacking TinyTeX"
 fresh "${DEST}/tinytex"
@@ -139,8 +149,10 @@ echo "TheoremDesk: updating TinyTeX to the current TeX Live"
 "${TLMGR}" update --all > /dev/null
 echo "TheoremDesk: adding ${#TEX_PACKAGES[@]} TeX packages for the templates"
 "${TLMGR}" install "${TEX_PACKAGES[@]}" > /dev/null
+fi
 
 # --- Lean -----------------------------------------------------------------
+if want lean; then
 ELAN_ARCHIVE="$( fetch elan )"
 LEAN_ARCHIVE="$( fetch lean )"
 TOOLCHAIN="$( field lean toolchain )"
@@ -172,8 +184,10 @@ esac
 ELAN_HOME="${DEST}/lean/elan-home" "${ELAN_INIT}" -y --default-toolchain none --no-modify-path > /dev/null
 find "${DEST}/lean/elan-home" -mindepth 1 -maxdepth 1 ! -name bin -exec rm -rf {} +
 ls "${DEST}/lean/elan-home/bin" > /dev/null
+fi
 
 # --- Git (Windows; Lake uses it, and Windows doesn't ship it) ---------------
+if want git; then
 GIT_VERSION=""
 if GIT_URL="$( field git url 2> /dev/null )" && [[ -n "${GIT_URL}" ]]; then
   GIT_ARCHIVE="$( fetch git )"
@@ -183,9 +197,71 @@ if GIT_URL="$( field git url 2> /dev/null )" && [[ -n "${GIT_URL}" ]]; then
   "${DEST}/git/cmd/git" --version
   GIT_VERSION="$( field git version )"
 fi
+fi
+
+# --- Local AI: llama.cpp and the models it runs -------------------------
+if want ai; then
+# llama-server answers OpenAI-style chat (with tool calls) and embeddings on
+# localhost. The Vulkan build uses any GPU (NVIDIA, AMD, Intel) and falls
+# back to its CPU backend when there's none. Models are copied, not
+# unpacked: GGUF files are loaded directly.
+LLAMA_ARCHIVE="$( fetch llama )"
+CHAT_MODEL="$( fetch chat-model )"
+EMBED_MODEL="$( fetch embedding-model )"
+echo "TheoremDesk: unpacking llama.cpp and copying the models"
+fresh "${DEST}/ai/llama"
+mkdir -p "${DEST}/ai/models"
+WORK="$( mktemp -d )"
+case "${LLAMA_ARCHIVE}" in
+  *.zip) unzip -q "${LLAMA_ARCHIVE}" -d "${WORK}" ;;
+  *) tar -xzf "${LLAMA_ARCHIVE}" -C "${WORK}" ;;
+esac
+# The archive holds the binaries either at its top or in one folder.
+SERVER="$( find "${WORK}" -type f \( -name llama-server -o -name llama-server.exe \) | head -1 )"
+[[ -n "${SERVER}" ]] || { echo "TheoremDesk: no llama-server in ${LLAMA_ARCHIVE}" >&2; exit 1; }
+cp -R "$( dirname "${SERVER}" )/." "${DEST}/ai/llama/"
+rm -rf "${WORK}"
+chmod +x "${DEST}"/ai/llama/llama-* 2> /dev/null || true
+# Linux builds need GCC's OpenMP runtime, which minimal systems lack. The
+# binaries look for libraries in their own folder first, so ship it there.
+if GOMP_URL="$( field libgomp url 2> /dev/null )" && [[ -n "${GOMP_URL}" ]]; then
+  GOMP_DEB="$( fetch libgomp )"
+  WORK="$( mktemp -d )"
+  if command -v dpkg-deb > /dev/null; then
+    dpkg-deb -x "${GOMP_DEB}" "${WORK}"
+  else
+    ( cd "${WORK}" && ar x "${GOMP_DEB}" && tar -xf data.tar.* )
+  fi
+  cp -P "${WORK}"/usr/lib/x86_64-linux-gnu/libgomp.so.1* "${DEST}/ai/llama/"
+  rm -rf "${WORK}"
+fi
+for model in "${CHAT_MODEL}" "${EMBED_MODEL}"; do
+  # Copy only if changed: these are gigabytes.
+  target="${DEST}/ai/models/$( basename "${model}" )"
+  if [[ ! -f "${target}" ]] || ! cmp -s <( stat -c %s "${model}" ) <( stat -c %s "${target}" ); then
+    cp "${model}" "${target}"
+  fi
+done
+# Remove models no longer pinned.
+for old in "${DEST}"/ai/models/*.gguf; do
+  case "$( basename "${old}" )" in
+    "$( basename "${CHAT_MODEL}" )" | "$( basename "${EMBED_MODEL}" )") ;;
+    *) rm -f "${old}" ;;
+  esac
+done
+"${DEST}/ai/llama/$( basename "${SERVER}" )" --version 2>&1 | grep -i 'version' | head -1
+cat > "${DEST}/ai/models.json" << EOF
+{
+	"llama": "$( field llama version )",
+	"chat": { "file": "$( basename "${CHAT_MODEL}" )", "name": "$( field chat-model version )" },
+	"embedding": { "file": "$( basename "${EMBED_MODEL}" )", "name": "$( field embedding-model version )" }
+}
+EOF
+fi
 
 # --- Record what's bundled -----------------------------------------------
-cat > "${DEST}/bundled.json" << EOF
+# (Only for a full bundle; the local AI records itself in ai/models.json.)
+[[ -n "${TD_BUNDLE_ONLY:-}" ]] || cat > "${DEST}/bundled.json" << EOF
 {
 	"platform": "${PLATFORM}",
 	"python": "$( field python version )",
