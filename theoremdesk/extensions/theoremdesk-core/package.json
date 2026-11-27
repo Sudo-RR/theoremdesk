@@ -108,7 +108,7 @@
 			},
 			{
 				"command": "theoremdesk.literature.search",
-				"title": "Search arXiv...",
+				"title": "Search Literature...",
 				"category": "TheoremDesk",
 				"icon": "$(search)"
 			},
@@ -132,9 +132,15 @@
 			},
 			{
 				"command": "theoremdesk.literature.open",
-				"title": "Open on arXiv",
+				"title": "Open Paper",
 				"category": "TheoremDesk",
 				"icon": "$(link-external)"
+			},
+			{
+				"command": "theoremdesk.literature.chooseSources",
+				"title": "Choose Literature Sources...",
+				"category": "TheoremDesk",
+				"icon": "$(filter)"
 			}
 		],
 		"viewsContainers": {
@@ -181,7 +187,7 @@
 			},
 			{
 				"view": "theoremdesk.literature",
-				"contents": "Find papers on arXiv and add them to your bibliography in one click.\n[Recommend Papers for This Project](command:theoremdesk.literature.recommend)\n[Search arXiv](command:theoremdesk.literature.search)"
+				"contents": "Find papers on arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex, and add them to your bibliography in one click.\n[Recommend Papers for This Project](command:theoremdesk.literature.recommend)\n[Search Literature](command:theoremdesk.literature.search)\n[Choose Sources](command:theoremdesk.literature.chooseSources)"
 			}
 		],
 		"menus": {
@@ -230,6 +236,11 @@
 					"command": "theoremdesk.literature.recommend",
 					"when": "view == theoremdesk.literature",
 					"group": "navigation@2"
+				},
+				{
+					"command": "theoremdesk.literature.chooseSources",
+					"when": "view == theoremdesk.literature",
+					"group": "navigation@3"
 				}
 			],
 			"view/item/context": [
@@ -432,7 +443,41 @@
 				"id": "theoremdesk.literature",
 				"label": "TheoremDesk Literature (arXiv)"
 			}
-		]
+		],
+		"configuration": {
+			"title": "TheoremDesk",
+			"properties": {
+				"theoremdesk.literature.sources": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": {
+						"type": "string",
+						"enum": [
+							"arxiv",
+							"inspire",
+							"zbmath",
+							"crossref",
+							"openalex"
+						],
+						"enumDescriptions": [
+							"arXiv preprints (physics, mathematics, CS)",
+							"INSPIRE-HEP: high-energy physics, with INSPIRE citation keys",
+							"zbMATH Open: mathematics, with reviews and MSC classes",
+							"Crossref: published journal articles with DOIs",
+							"OpenAlex: all fields; also finds works related to those you cite"
+						]
+					},
+					"default": [
+						"arxiv",
+						"inspire",
+						"zbmath",
+						"crossref",
+						"openalex"
+					],
+					"markdownDescription": "Where Literature search and recommendations look. Results from several sources are merged: a paper appears once, with its arXiv abstract, its journal details and its INSPIRE key."
+				}
+			}
+		}
 	},
 	"devDependencies": {
 		"@types/node": "^24.19.4",

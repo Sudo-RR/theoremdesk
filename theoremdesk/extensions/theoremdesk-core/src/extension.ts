@@ -37,6 +37,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('theoremdesk.literature.add', (item) => literature.add(item)),
 		vscode.commands.registerCommand('theoremdesk.literature.copyCite', (item) => literature.copyCite(item)),
 		vscode.commands.registerCommand('theoremdesk.literature.open', (item) => literature.open(item)),
+		vscode.commands.registerCommand('theoremdesk.literature.chooseSources', () => literature.chooseSources()),
 		vscode.commands.registerCommand('theoremdesk.newLatexDocument', () => newLatexDocument(context)),
 		vscode.commands.registerCommand('theoremdesk.setReferenceStyle', () => setReferenceStyle(context)),
 		vscode.commands.registerCommand('theoremdesk.leanBuild', () => verification.buildProject()),

@@ -12,9 +12,11 @@ const test = require('node:test');
 const SERVER = path.join(__dirname, '..', 'out', 'mcp', 'literatureServer.js');
 
 /** Start the server; returns call(method, params) and stop(). */
-function startServer(fixture) {
+function startServer(fixture, folder) {
 	const child = spawn(process.execPath, [SERVER], {
-		env: { ...process.env, THEOREMDESK_ARXIV_FIXTURE: path.join(__dirname, 'fixtures', fixture) },
+		env: folder
+			? { ...process.env, THEOREMDESK_LITERATURE_FIXTURES: path.join(__dirname, 'fixtures') }
+			: { ...process.env, THEOREMDESK_ARXIV_FIXTURE: path.join(__dirname, 'fixtures', fixture) },
 		stdio: ['pipe', 'pipe', 'inherit'],
 	});
 	const pending = new Map();
@@ -55,7 +57,7 @@ test('MCP handshake and tool list', async () => {
 		const list = await server.call('tools/list');
 		assert.deepEqual(
 			list.result.tools.map((t) => t.name),
-			['search_arxiv', 'recommend_papers', 'get_bibtex', 'add_to_bibliography'],
+			['search_literature', 'search_arxiv', 'recommend_papers', 'get_bibtex', 'add_to_bibliography'],
 		);
 		for (const tool of list.result.tools) {
 			assert.equal(tool.inputSchema.type, 'object');
@@ -122,5 +124,36 @@ test('bad input is a readable tool error, not a crash', async () => {
 		assert.deepEqual((await server.call('ping')).result, {});
 	} finally {
 		server.stop();
+	}
+});
+
+test('search_literature merges all sources; INSPIRE BibTeX is preferred', async () => {
+	const server = startServer(undefined, true);
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'td-mcp-'));
+	const bib = path.join(dir, 'references.bib');
+	try {
+		const reply = await server.call('tools/call', { name: 'search_literature', arguments: { query: 'pendulum', max_results: 50 } });
+		assert.equal(reply.result.isError, false);
+		const out = text(reply);
+		for (const source of ['arXiv', 'INSPIRE-HEP', 'zbMATH Open', 'Crossref', 'OpenAlex']) {
+			assert.match(out, new RegExp(`from [^\n]*${source}`), source);
+		}
+		assert.match(out, /INSPIRE Maldacena:1997re/);
+		assert.match(out, /Zbl 1112\.70020/);
+
+		const only = await server.call('tools/call', { name: 'search_literature', arguments: { query: 'x', sources: ['zbmath'] } });
+		assert.doesNotMatch(text(only), /from [^\n]*arXiv/);
+
+		const entry = await server.call('tools/call', { name: 'get_bibtex', arguments: { identifier: 'hep-th/9711200' } });
+		assert.match(text(entry), /^@article\{Maldacena:1997re,/);
+		assert.match(text(entry), /journal = "Adv\. Theor\. Math\. Phys\."/);
+
+		const added = await server.call('tools/call', { name: 'add_to_bibliography', arguments: { identifier: '10.4310/ATMP.1998.v2.n2.a1', bib_file: bib } });
+		assert.match(text(added), /\\cite\{Maldacena:1997re\}/);
+		const again = await server.call('tools/call', { name: 'add_to_bibliography', arguments: { arxiv_id: 'hep-th/9711200', bib_file: bib } });
+		assert.match(text(again), /^Already in .* as Maldacena:1997re/);
+	} finally {
+		server.stop();
+		fs.rmSync(dir, { recursive: true, force: true });
 	}
 });

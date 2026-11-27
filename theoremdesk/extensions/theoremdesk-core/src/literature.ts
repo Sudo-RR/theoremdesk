@@ -2,79 +2,124 @@
 // view and the MCP server. Free of the `vscode` API so it can be tested with
 // plain Node.
 //
-// Sources implement LiteratureSource; arXiv is the first. Semantic Scholar,
-// PubMed and journal sources can be added the same way.
+// Papers come from several sources (sources.ts: arXiv, INSPIRE-HEP, zbMATH
+// Open, Crossref, OpenAlex). Each source fills in what it knows; results are
+// merged by DOI or arXiv ID so a paper appears once with the best of each.
+
+export type SourceId = 'arxiv' | 'inspire' | 'zbmath' | 'crossref' | 'openalex';
+
+export const SOURCE_NAMES: Record<SourceId, string> = {
+	arxiv: 'arXiv',
+	inspire: 'INSPIRE-HEP',
+	zbmath: 'zbMATH Open',
+	crossref: 'Crossref',
+	openalex: 'OpenAlex',
+};
 
 export interface Paper {
-	source: 'arxiv';
-	/** arXiv identifier without version: 1706.03762 or hep-th/9711200. */
+	/** The source this record came from (the first, after merging). */
+	source: SourceId;
+	/** Every source that returned this paper, after merging. */
+	sources?: SourceId[];
+	/** The source's own identifier (arXiv ID, INSPIRE record, zbMATH ID, DOI, OpenAlex ID). */
 	id: string;
 	version?: string;
 	title: string;
+	/** As the source gives them: "First Last" or "Last, First". */
 	authors: string[];
 	abstract: string;
-	published: string;
-	updated: string;
+	published?: string;
+	updated?: string;
 	year: number;
-	primaryCategory: string;
-	categories: string[];
+	/** arXiv identifier without version: 1706.03762 or hep-th/9711200. */
+	arxivId?: string;
+	primaryCategory?: string;
+	categories?: string[];
 	doi?: string;
+	journal?: string;
+	journalShort?: string;
+	volume?: string;
+	issue?: string;
+	pages?: string;
+	/** Free-text journal reference (arXiv). */
 	journalRef?: string;
 	comment?: string;
+	/** INSPIRE's citation key, the one physicists use: Maldacena:1997re. */
+	texkey?: string;
+	inspireId?: string;
+	zbl?: string;
+	openalexId?: string;
+	/** OpenAlex IDs of related works. */
+	relatedIds?: string[];
+	citationCount?: number;
 	url: string;
-	pdfUrl: string;
+	pdfUrl?: string;
+	/** A ready BibTeX entry from the source (INSPIRE). */
+	bibtex?: string;
 }
 
 export interface SearchOptions {
 	maxResults?: number;
 	start?: number;
-	sort?: 'relevance' | 'recent';
-	/** An arXiv category, such as math-ph or hep-th. */
+	sort?: 'relevance' | 'recent' | 'cited';
+	/** An arXiv category, such as math-ph or hep-th (arXiv only). */
 	category?: string;
 }
 
 export interface LiteratureSource {
-	id: string;
+	id: SourceId;
 	name: string;
 	search(query: string, options?: SearchOptions): Promise<Paper[]>;
-	byIds(ids: string[]): Promise<Paper[]>;
+	/** Look papers up by arXiv ID or DOI. */
+	lookup?(identifiers: { arxivIds?: string[]; dois?: string[] }): Promise<Paper[]>;
+	/** Works related to the given papers (OpenAlex). */
+	related?(papers: Paper[], limit: number): Promise<Paper[]>;
+	/** The source's own BibTeX for a paper it returned (INSPIRE). */
+	bibtex?(paper: Paper): Promise<string | undefined>;
 }
 
 // ---------------------------------------------------------------------------
-// arXiv
+// Fetching, politely
 
-const ARXIV_API = 'https://export.arxiv.org/api/query';
-/** arXiv asks API users for no more than one request every three seconds. */
-const ARXIV_INTERVAL_MS = 3000;
+export type FetchText = (url: string, accept?: string) => Promise<string>;
 
-export type FetchText = (url: string) => Promise<string>;
-
-export const defaultFetch: FetchText = async (url) => {
-	const response = await fetch(url, { headers: { 'User-Agent': 'TheoremDesk (literature search)' } });
+export const defaultFetch: FetchText = async (url, accept) => {
+	const response = await fetch(url, {
+		headers: { 'User-Agent': 'TheoremDesk (literature search)', ...(accept ? { Accept: accept } : {}) },
+	});
 	if (!response.ok) {
-		throw new Error(`arXiv answered ${response.status} ${response.statusText}`);
+		throw new Error(`${new URL(url).host} answered ${response.status} ${response.statusText}`);
 	}
 	return response.text();
 };
 
-function decodeXml(text: string): string {
-	return text
-		.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-		.replace(/&lt;/g, '<')
-		.replace(/&gt;/g, '>')
-		.replace(/&quot;/g, '"')
-		.replace(/&apos;/g, "'")
-		.replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
-		.replace(/&#x([0-9a-f]+);/gi, (_, n: string) => String.fromCodePoint(parseInt(n, 16)))
-		.replace(/&amp;/g, '&');
+/** One request at a time per source, at least intervalMs apart. */
+export class RateLimiter {
+	private last = 0;
+	private queue: Promise<unknown> = Promise.resolve();
+
+	constructor(private readonly intervalMs: number) {}
+
+	run<T>(task: () => Promise<T>): Promise<T> {
+		const go = async () => {
+			const wait = this.last + this.intervalMs - Date.now();
+			if (wait > 0) {
+				await new Promise((resolve) => setTimeout(resolve, wait));
+			}
+			try {
+				return await task();
+			} finally {
+				this.last = Date.now();
+			}
+		};
+		const result = this.queue.then(go, go);
+		this.queue = result.catch(() => undefined);
+		return result;
+	}
 }
 
-const clean = (text: string) => decodeXml(text).replace(/\s+/g, ' ').trim();
-
-function tag(xml: string, name: string): string | undefined {
-	const match = new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`).exec(xml);
-	return match ? clean(match[1]) : undefined;
-}
+// ---------------------------------------------------------------------------
+// Identifiers
 
 /** `http://arxiv.org/abs/1104.0312v2` -> { id: '1104.0312', version: 'v2' }. */
 export function parseArxivId(text: string): { id: string; version?: string } | undefined {
@@ -82,101 +127,118 @@ export function parseArxivId(text: string): { id: string; version?: string } | u
 	return match ? { id: match[1], version: match[2] } : undefined;
 }
 
-export function parseArxivAtom(xml: string): Paper[] {
-	const papers: Paper[] = [];
-	for (const [, entry] of xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)) {
-		const idText = tag(entry, 'id') ?? '';
-		const parsed = parseArxivId(idText);
-		if (!parsed) {
-			continue; // arXiv returns an entry describing the error for bad queries
-		}
-		const published = tag(entry, 'published') ?? '';
-		const categories = [...entry.matchAll(/<category[^>]*term="([^"]+)"/g)].map((m) => m[1]);
-		const primary = /<arxiv:primary_category[^>]*term="([^"]+)"/.exec(entry)?.[1] ?? categories[0] ?? '';
-		papers.push({
-			source: 'arxiv',
-			id: parsed.id,
-			version: parsed.version,
-			title: tag(entry, 'title') ?? '',
-			authors: [...entry.matchAll(/<author>\s*<name>([\s\S]*?)<\/name>/g)].map((m) => clean(m[1])),
-			abstract: tag(entry, 'summary') ?? '',
-			published,
-			updated: tag(entry, 'updated') ?? published,
-			year: Number(published.slice(0, 4)) || 0,
-			primaryCategory: primary,
-			categories,
-			doi: tag(entry, 'arxiv:doi'),
-			journalRef: tag(entry, 'arxiv:journal_ref'),
-			comment: tag(entry, 'arxiv:comment'),
-			url: `https://arxiv.org/abs/${parsed.id}`,
-			pdfUrl: `https://arxiv.org/pdf/${parsed.id}`,
-		});
+/** A DOI from a DOI, doi: prefix or doi.org link. */
+export function parseDoi(text: string): string | undefined {
+	const match = /(?:doi\.org\/|doi:\s*|^)(10\.\d{4,9}\/[^\s"<>{}]+)/i.exec(text.trim());
+	return match ? match[1].replace(/[.,;]$/, '') : undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Merging results from several sources
+
+/** Field priority: who to trust first for each kind of information. */
+const PUBLICATION_ORDER: SourceId[] = ['inspire', 'crossref', 'zbmath', 'openalex', 'arxiv'];
+const ABSTRACT_ORDER: SourceId[] = ['arxiv', 'inspire', 'zbmath', 'openalex', 'crossref'];
+
+export function normalizedTitle(title: string): string {
+	return title
+		.toLowerCase()
+		.replace(/\$[^$]*\$/g, '')
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim();
+}
+
+function identityKeys(p: Paper): string[] {
+	const keys: string[] = [];
+	if (p.doi) {
+		keys.push(`doi:${p.doi.toLowerCase()}`);
 	}
-	return papers;
+	if (p.arxivId) {
+		keys.push(`arxiv:${p.arxivId}`);
+	}
+	if (keys.length === 0 && p.title) {
+		keys.push(`title:${normalizedTitle(p.title)}:${p.year}`);
+	}
+	return keys;
+}
+
+function pick<K extends keyof Paper>(records: Paper[], order: SourceId[], field: K): Paper[K] | undefined {
+	for (const source of order) {
+		const value = records.find((r) => r.source === source && r[field] !== undefined && r[field] !== '')?.[field];
+		if (value !== undefined) {
+			return value;
+		}
+	}
+	return records.find((r) => r[field] !== undefined && r[field] !== '')?.[field];
+}
+
+/** Combine records of the same paper from different sources. */
+export function mergeRecords(records: Paper[]): Paper {
+	const base = records[0];
+	const pub = <K extends keyof Paper>(f: K) => pick(records, PUBLICATION_ORDER, f);
+	const arxiv = records.find((r) => r.source === 'arxiv');
+	const sources = [...new Set(records.flatMap((r) => r.sources ?? [r.source]))];
+	const counts = records.map((r) => r.citationCount).filter((c): c is number => c !== undefined);
+	return {
+		...base,
+		sources,
+		title: pub('title') ?? base.title,
+		authors: pick(records, PUBLICATION_ORDER, 'authors') ?? base.authors,
+		abstract: pick(records, ABSTRACT_ORDER, 'abstract') ?? '',
+		year: (pub('year') as number | undefined) ?? base.year,
+		arxivId: pub('arxivId'),
+		version: arxiv?.version ?? base.version,
+		primaryCategory: pick(records, ['arxiv', 'inspire'], 'primaryCategory'),
+		categories: pick(records, ['arxiv', 'inspire', 'zbmath'], 'categories'),
+		doi: pub('doi'),
+		journal: pub('journal'),
+		journalShort: pub('journalShort'),
+		volume: pub('volume'),
+		issue: pub('issue'),
+		pages: pub('pages'),
+		journalRef: pub('journalRef'),
+		texkey: pub('texkey'),
+		inspireId: pub('inspireId'),
+		zbl: pub('zbl'),
+		openalexId: pub('openalexId'),
+		relatedIds: pub('relatedIds'),
+		bibtex: pub('bibtex'),
+		citationCount: counts.length > 0 ? Math.max(...counts) : undefined,
+		url: arxiv?.url ?? base.url,
+		pdfUrl: arxiv?.pdfUrl ?? pub('pdfUrl'),
+	};
 }
 
 /**
- * An arXiv search_query from free text. Field syntax (`au:`, `ti:`, `cat:`,
- * AND/OR) passes through unchanged; otherwise every word must appear, and
- * quoted phrases are kept together.
+ * Merge result lists from several sources, keeping each source's own
+ * relevance order by taking their results in turn, and combining records of
+ * the same paper (same DOI or arXiv ID).
  */
-export function arxivSearchQuery(query: string, category?: string): string {
-	const q = query.trim();
-	let search: string;
-	if (/\b(?:ti|au|abs|co|jr|cat|rn|all|id):|\b(?:AND|OR|ANDNOT)\b/.test(q)) {
-		search = q;
-	} else {
-		const parts = q.match(/"[^"]+"|\S+/g) ?? [];
-		search = parts.map((p) => `all:${p.replace(/[()]/g, '')}`).join(' AND ');
-	}
-	return category ? `(${search}) AND cat:${category}` : search;
-}
-
-export class ArxivSource implements LiteratureSource {
-	readonly id = 'arxiv';
-	readonly name = 'arXiv';
-	private last = 0;
-	private queue: Promise<unknown> = Promise.resolve();
-
-	constructor(private readonly fetchText: FetchText = defaultFetch, private readonly intervalMs = ARXIV_INTERVAL_MS) {}
-
-	/** One request at a time, at least intervalMs apart. */
-	private request(url: string): Promise<string> {
-		const run = async () => {
-			const wait = this.last + this.intervalMs - Date.now();
-			if (wait > 0) {
-				await new Promise((resolve) => setTimeout(resolve, wait));
+export function mergeResults(lists: Paper[][]): Paper[] {
+	const order: string[] = [];
+	const groups = new Map<string, Paper[]>();
+	const alias = new Map<string, string>();
+	const longest = Math.max(0, ...lists.map((l) => l.length));
+	for (let i = 0; i < longest; i++) {
+		for (const list of lists) {
+			const paper = list[i];
+			if (!paper) {
+				continue;
 			}
-			try {
-				return await this.fetchText(url);
-			} finally {
-				this.last = Date.now();
+			const keys = identityKeys(paper);
+			const existing = keys.map((k) => alias.get(k)).find((k) => k !== undefined);
+			const group = existing ?? keys[0];
+			if (!groups.has(group)) {
+				groups.set(group, []);
+				order.push(group);
 			}
-		};
-		const result = this.queue.then(run, run);
-		this.queue = result.catch(() => undefined);
-		return result;
-	}
-
-	async search(query: string, options: SearchOptions = {}): Promise<Paper[]> {
-		const params = new URLSearchParams({
-			search_query: arxivSearchQuery(query, options.category),
-			start: String(options.start ?? 0),
-			max_results: String(Math.min(options.maxResults ?? 20, 100)),
-			sortBy: options.sort === 'recent' ? 'submittedDate' : 'relevance',
-			sortOrder: 'descending',
-		});
-		return parseArxivAtom(await this.request(`${ARXIV_API}?${params}`));
-	}
-
-	async byIds(ids: string[]): Promise<Paper[]> {
-		const clean = ids.map((i) => parseArxivId(i)?.id).filter((i): i is string => Boolean(i));
-		if (clean.length === 0) {
-			return [];
+			groups.get(group)!.push(paper);
+			for (const k of keys) {
+				alias.set(k, group);
+			}
 		}
-		const params = new URLSearchParams({ id_list: clean.join(','), max_results: String(clean.length) });
-		return parseArxivAtom(await this.request(`${ARXIV_API}?${params}`));
 	}
+	return order.map((g) => mergeRecords(groups.get(g)!));
 }
 
 // ---------------------------------------------------------------------------
@@ -240,6 +302,17 @@ function escapeText(text: string): string {
 	return text.replace(/(^|[^\\])([&%#])/g, '$1\\$2');
 }
 
+/** "Maldacena, Juan Martin" or "Juan Martin Maldacena" -> "Juan Martin Maldacena". */
+export function displayName(name: string): string {
+	const comma = name.indexOf(',');
+	return comma > 0 ? `${name.slice(comma + 1).trim()} ${name.slice(0, comma).trim()}`.trim() : name.trim();
+}
+
+function surname(name: string): string {
+	const comma = name.indexOf(',');
+	return comma > 0 ? name.slice(0, comma).trim() : name.trim().split(/\s+/).pop() ?? name;
+}
+
 const STOPWORDS = new Set(
 	`a an the of on in at to for from by with and or but not is are was were be been being as into onto over under
 	 between among via using use used new novel some any all its it this that these those their our we you they
@@ -250,24 +323,26 @@ const STOPWORDS = new Set(
 	 two three one`.split(/\s+/),
 );
 
+function fold(s: string): string {
+	return s
+		.normalize('NFD')
+		.replace(/[̀-ͯ]/g, '')
+		.replace(/[ßæøłœ]/gi, (c) => ({ ß: 'ss', æ: 'ae', ø: 'o', ł: 'l', œ: 'oe' } as Record<string, string>)[c.toLowerCase()] ?? c)
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, '');
+}
+
 /** A readable, unique key: first author's surname + year + first meaningful title word. */
 export function bibtexKey(paper: Paper, taken: Set<string> = new Set()): string {
-	const fold = (s: string) =>
-		s
-			.normalize('NFD')
-			.replace(/[̀-ͯ]/g, '')
-			.replace(/[ßæøłœ]/gi, (c) => ({ ß: 'ss', æ: 'ae', ø: 'o', ł: 'l', œ: 'oe' } as Record<string, string>)[c.toLowerCase()] ?? c)
-			.toLowerCase()
-			.replace(/[^a-z0-9]/g, '');
 	const first = paper.authors[0] ?? 'anonymous';
-	const surname = fold(first.split(/\s+/).filter(Boolean).pop() ?? first) || 'anonymous';
+	const name = fold(surname(first)) || 'anonymous';
 	const word =
 		paper.title
 			.replace(/\$[^$]*\$/g, ' ')
 			.split(/[^A-Za-zÀ-ɏ]+/)
 			.map(fold)
 			.find((w) => w.length > 3 && !STOPWORDS.has(w)) ?? '';
-	const base = `${surname}${paper.year || ''}${word}`;
+	const base = `${name}${paper.year || ''}${word}`;
 	let key = base;
 	for (let i = 0; taken.has(key); i++) {
 		key = base + String.fromCharCode(97 + i);
@@ -275,26 +350,49 @@ export function bibtexKey(paper: Paper, taken: Set<string> = new Set()): string 
 	return key;
 }
 
-/** A BibTeX entry in the form arXiv recommends: eprint, archivePrefix, primaryClass. */
+/**
+ * A BibTeX entry. Published papers are @article (journal, volume, pages),
+ * keeping the arXiv eprint fields when there's a preprint; preprints are
+ * @misc in the form arXiv recommends; anything else is @misc with a DOI.
+ */
 export function toBibtex(paper: Paper, key: string): string {
 	const fields: [string, string][] = [
 		['author', paper.authors.map(toLatex).join(' and ')],
 		['title', `{${escapeText(toLatex(paper.title))}}`], // double braces keep capitals
-		['year', String(paper.year)],
-		['eprint', paper.id],
-		['archivePrefix', 'arXiv'],
-		['primaryClass', paper.primaryCategory],
 	];
+	let type = 'misc';
+	if (paper.journal) {
+		type = 'article';
+		fields.push(['journal', escapeText(toLatex(paper.journal))]);
+		if (paper.volume) {
+			fields.push(['volume', paper.volume]);
+		}
+		if (paper.issue) {
+			fields.push(['number', paper.issue]);
+		}
+		if (paper.pages) {
+			fields.push(['pages', paper.pages.replace(/(\d)\s*[-–]+\s*(\w)/, '$1--$2')]);
+		}
+	}
+	fields.push(['year', String(paper.year)]);
+	if (paper.arxivId) {
+		fields.push(['eprint', paper.arxivId], ['archivePrefix', 'arXiv']);
+		if (paper.primaryCategory) {
+			fields.push(['primaryClass', paper.primaryCategory]);
+		}
+	}
 	if (paper.doi) {
 		fields.push(['doi', paper.doi]);
 	}
-	if (paper.journalRef) {
+	if (!paper.journal && paper.journalRef) {
 		fields.push(['note', escapeText(toLatex(paper.journalRef))]);
 	}
-	fields.push(['url', paper.url]);
+	if (!paper.doi) {
+		fields.push(['url', paper.url]);
+	}
 	const width = Math.max(...fields.map(([name]) => name.length));
 	const body = fields.map(([name, value]) => `  ${name.padEnd(width)} = {${value}}`).join(',\n');
-	return `@misc{${key},\n${body}\n}\n`;
+	return `@${type}{${key},\n${body}\n}\n`;
 }
 
 export interface BibIndex {
@@ -323,19 +421,38 @@ export function indexBib(bib: string): BibIndex {
 	return { keys, eprints, dois };
 }
 
+/** Whether the paper is in the bibliography, by arXiv ID or DOI. */
+export function inBib(index: BibIndex, paper: Paper): boolean {
+	return Boolean((paper.arxivId && index.eprints.has(paper.arxivId)) || (paper.doi && index.dois.has(paper.doi.toLowerCase())));
+}
+
 /** The key under which this paper is already in the bibliography, if it is. */
 export function findInBib(bib: string, paper: Paper): string | undefined {
-	const index = indexBib(bib);
-	if (!index.eprints.has(paper.id) && !(paper.doi && index.dois.has(paper.doi.toLowerCase()))) {
+	if (!inBib(indexBib(bib), paper)) {
 		return undefined;
 	}
 	for (const m of bib.matchAll(/@\w+\s*\{\s*([^,\s]+)\s*,([\s\S]*?)(?=\n@|$)/g)) {
 		const entry = m[2];
-		if (entry.includes(paper.id) || (paper.doi && entry.toLowerCase().includes(paper.doi.toLowerCase()))) {
+		const id = paper.arxivId;
+		if ((id && entry.includes(id)) || (paper.doi && entry.toLowerCase().includes(paper.doi.toLowerCase()))) {
 			return m[1];
 		}
 	}
-	return [...index.keys][0];
+	return undefined;
+}
+
+/** The entry to add: the source's own BibTeX (INSPIRE) if it has one, else ours. */
+export function bibtexFor(paper: Paper, taken: Set<string>): { entry: string; key: string } {
+	if (paper.bibtex) {
+		const own = /@\w+\s*\{\s*([^,\s]+)\s*,/.exec(paper.bibtex);
+		if (own) {
+			const key = taken.has(own[1]) ? bibtexKey(paper, taken) : own[1];
+			const entry = toLatex(paper.bibtex.replace(own[0], own[0].replace(own[1], key))).trim() + '\n';
+			return { entry, key };
+		}
+	}
+	const key = bibtexKey(paper, taken);
+	return { entry: toBibtex(paper, key), key };
 }
 
 /** Append the paper to a .bib file's text, unless it's already there. */
@@ -344,9 +461,57 @@ export function addToBib(bib: string, paper: Paper): { text: string; key: string
 	if (existing) {
 		return { text: bib, key: existing, added: false };
 	}
-	const key = bibtexKey(paper, indexBib(bib).keys);
+	const { entry, key } = bibtexFor(paper, indexBib(bib).keys);
 	const separator = bib.length === 0 || bib.endsWith('\n\n') ? '' : bib.endsWith('\n') ? '\n' : '\n\n';
-	return { text: bib + separator + toBibtex(paper, key), key, added: true };
+	return { text: bib + separator + entry, key, added: true };
+}
+
+/**
+ * The best record to cite: if a source has its own BibTeX for the paper
+ * (INSPIRE, with the key physicists use), fetch it; otherwise fill in journal
+ * details from a source that has them.
+ */
+export async function bestForBibliography(paper: Paper, sources: LiteratureSource[]): Promise<Paper> {
+	let best = paper;
+	if (!best.bibtex) {
+		for (const source of sources) {
+			if (!source.bibtex) {
+				continue;
+			}
+			try {
+				let record = best.sources?.includes(source.id) || best.source === source.id ? best : undefined;
+				if (!record && source.lookup && (best.arxivId || best.doi)) {
+					const [found] = await source.lookup({
+						arxivIds: best.arxivId ? [best.arxivId] : [],
+						dois: best.doi ? [best.doi] : [],
+					});
+					record = found ? mergeRecords([found, best]) : undefined;
+				}
+				const bibtex = record ? await source.bibtex(record) : undefined;
+				if (record && bibtex) {
+					return { ...record, bibtex };
+				}
+			} catch {
+				// fall through to the next source, or our own entry
+			}
+		}
+	}
+	const doi = best.doi;
+	if (!best.journal && doi) {
+		for (const source of sources) {
+			if (source.id === 'crossref' && source.lookup) {
+				try {
+					const [found] = await source.lookup({ dois: [doi] });
+					if (found) {
+						best = mergeRecords([found, best]);
+					}
+				} catch {
+					// keep what we have
+				}
+			}
+		}
+	}
+	return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -436,36 +601,84 @@ export function rankBySimilarity(profile: string, papers: Paper[]): { paper: Pap
 		.sort((a, b) => b.score - a.score);
 }
 
+/** The papers a .bib file cites, as stubs with their arXiv IDs and DOIs. */
+export function bibSeeds(bib: string): Paper[] {
+	const index = indexBib(bib);
+	const stubs: Paper[] = [];
+	for (const id of index.eprints) {
+		stubs.push({ source: 'arxiv', id, arxivId: id, title: '', authors: [], abstract: '', year: 0, url: '' });
+	}
+	for (const doi of index.dois) {
+		stubs.push({ source: 'crossref', id: doi, doi, title: '', authors: [], abstract: '', year: 0, url: '' });
+	}
+	return stubs;
+}
+
 /**
- * Recommend papers for a project: search the source with the profile's top
- * terms, rank by similarity, and leave out papers already in the bibliography.
+ * Recommend papers for a project. Candidates come from searching each
+ * source with the manuscript's main terms, and from works related to the
+ * papers it already cites (OpenAlex). They are merged, papers already in the
+ * bibliography are left out, and the rest ranked by similarity to the
+ * manuscript, with a bonus for papers several sources or related-work lists
+ * agree on.
  */
 export async function recommend(
-	source: LiteratureSource,
+	sources: LiteratureSource | LiteratureSource[],
 	tex: string,
 	bib: string,
 	options: { maxResults?: number; candidates?: number } = {},
 ): Promise<{ paper: Paper; score: number }[]> {
+	const list = Array.isArray(sources) ? sources : [sources];
 	const bibTitles = [...bib.matchAll(/\btitle\s*=\s*[{"]([\s\S]*?)[}"]\s*,?\s*\n/gi)].map((m) => m[1]);
 	const profile = projectProfile(tex, bibTitles);
-	const query = recommendationQuery(profile);
-	if (!query) {
+	const top = topTerms(profile, 6);
+	if (top.length === 0) {
 		return [];
 	}
-	const candidates = await source.search(query, { maxResults: options.candidates ?? 60 });
+	const seeds = bibSeeds(bib);
+	const lists = await Promise.all(
+		list.flatMap((source) => {
+			const jobs: Promise<Paper[]>[] = [];
+			const query = source.id === 'arxiv' ? top.map((t) => `all:${t}`).join(' OR ') : top.slice(0, 4).join(' ');
+			jobs.push(source.search(query, { maxResults: options.candidates ?? (source.id === 'arxiv' ? 60 : 25) }).catch(() => []));
+			if (source.related && seeds.length > 0) {
+				jobs.push(source.related(seeds, 40).catch(() => []));
+			}
+			return jobs;
+		}),
+	);
 	const index = indexBib(bib);
-	const fresh = candidates.filter((p) => !index.eprints.has(p.id) && !(p.doi && index.dois.has(p.doi.toLowerCase())));
-	return rankBySimilarity(profile, fresh).slice(0, options.maxResults ?? 15);
+	const merged = mergeResults(lists).filter((p) => !inBib(index, p) && p.title);
+	return rankBySimilarity(profile, merged)
+		.map(({ paper, score }) => ({ paper, score: score + 0.02 * ((paper.sources?.length ?? 1) - 1) }))
+		.sort((a, b) => b.score - a.score)
+		.slice(0, options.maxResults ?? 15);
 }
 
 /** One paper as a few lines of text, for agents and logs. */
 export function describe(paper: Paper, abstractChars = 300): string {
-	const authors = paper.authors.length > 3 ? `${paper.authors.slice(0, 3).join(', ')} et al.` : paper.authors.join(', ');
+	const names = paper.authors.map(displayName);
+	const authors = names.length > 3 ? `${names.slice(0, 3).join(', ')} et al.` : names.join(', ');
 	const abstract = paper.abstract.length > abstractChars ? `${paper.abstract.slice(0, abstractChars)}...` : paper.abstract;
+	const ids = [
+		paper.arxivId ? `arXiv:${paper.arxivId}${paper.primaryCategory ? ` [${paper.primaryCategory}]` : ''}` : undefined,
+		paper.doi ? `doi:${paper.doi}` : undefined,
+		paper.texkey ? `INSPIRE ${paper.texkey}` : undefined,
+		paper.zbl ? `Zbl ${paper.zbl}` : undefined,
+	].filter(Boolean);
+	const venue = paper.journal
+		? `${paper.journalShort ?? paper.journal}${paper.volume ? ` ${paper.volume}` : ''}${paper.pages ? `, ${paper.pages}` : ''}`
+		: paper.journalRef;
+	const extras = [
+		venue,
+		paper.citationCount !== undefined ? `${paper.citationCount} citations` : undefined,
+		`from ${(paper.sources ?? [paper.source]).map((s) => SOURCE_NAMES[s]).join(', ')}`,
+	].filter(Boolean);
 	return [
-		`${paper.title}`,
-		`  ${authors} (${paper.year}) · arXiv:${paper.id} [${paper.primaryCategory}]${paper.journalRef ? ` · ${paper.journalRef}` : ''}`,
+		paper.title,
+		`  ${authors} (${paper.year}) · ${ids.join(' · ')}`,
+		`  ${extras.join(' · ')}`,
 		`  ${paper.url}`,
-		`  ${abstract}`,
+		...(abstract ? [`  ${abstract}`] : []),
 	].join('\n');
 }

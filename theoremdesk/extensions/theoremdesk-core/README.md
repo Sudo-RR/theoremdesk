@@ -4,7 +4,7 @@ Built into TheoremDesk. It adds:
 
 - **TheoremDesk: New Research Project...** (also under File → New File...), which creates a project from a template in `templates/`.
 - The **Get started with TheoremDesk** walkthrough, opened on first launch.
-- **Literature**: arXiv search and recommendations for the open project, Add to bibliography, and a literature MCP server for agents (see below).
+- **Literature**: search across arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex, recommendations for the open project, Add to bibliography, and a literature MCP server for agents (see below).
 - The **Environment** view (⊢ icon in the activity bar) and status bar item. They check Git, Python, Lean (elan), TeX and Windows long-path support, plus the open project's `.venv`, Lean version, prebuilt Mathlib and Lean build. Each problem has a one-click fix that runs in its own terminal. The checks live in `src/checks.ts` and don't use the VS Code API, so they're tested against a fake machine.
 - Research defaults: basedpyright as the Python language server (`python.languageServer: None`).
 
@@ -42,19 +42,30 @@ Each mutant is **killed** (a proof broke), **survived**, **stillborn** (the muta
 
 The file must compile first; build the project (`lake build`) before testing. Prior art: [Mutate.lean](https://github.com/jubnzv/Mutate.lean) (definitions; no licence, so not bundled), [Specmut](https://github.com/TylerRector/Specmut) and [lean-audit](https://github.com/Futlas/lean-audit) (statements).
 
-## Literature: arXiv search, recommendations, Add to bibliography
+## Literature: search, recommendations, Add to bibliography
+
+Five free, public sources, none of which needs a key:
+
+| Source | Covers | Brings |
+|---|---|---|
+| arXiv | Preprints in physics, mathematics, CS | Abstracts, categories, PDFs |
+| INSPIRE-HEP | High-energy physics, gravitation, cosmology | The citation keys physicists use (`Maldacena:1997re`), INSPIRE's own BibTeX, citation counts |
+| zbMATH Open | Mathematics | Reviews and summaries, MSC classes, journal details |
+| Crossref | Every journal with DOIs (APS, Springer, Elsevier, IOP, AMS, ...) | Publication details |
+| OpenAlex | All fields | Related works for recommendations, citation counts |
 
 The **Literature** view (in the ⊢ sidebar):
 
-- **Recommend Papers for This Project** reads the open manuscript (its title and abstract count most, then the text and the titles already in the `.bib`), searches arXiv for its main terms, ranks the results by text similarity (TF-IDF), and leaves out papers already in the bibliography.
-- **Search arXiv** takes plain words (all must appear, "quoted phrases" stay together) or arXiv syntax (`au:`, `ti:`, `abs:`, `cat:`, `AND`, `OR`).
-- Hover a paper for its abstract; click to open it on arXiv. **+** adds it to the project's `.bib` (asking which one if there are several, or offering to create `references.bib`) and puts `\cite{key}` on the clipboard. Papers already cited show a tick and their key, matched by arXiv ID or DOI.
+- **Search Literature** asks every chosen source at once and merges the results: a paper found by several sources appears once, matched by DOI or arXiv ID, with its abstract from arXiv, its journal, volume and pages from INSPIRE, Crossref or zbMATH, and its INSPIRE key. Each paper shows which sources found it. Results alternate between sources, so no single source crowds out the rest. A source that's down is reported, and the others' results still show.
+- **Choose Literature Sources** (the filter button) picks the sources; the choice is the `theoremdesk.literature.sources` setting.
+- **Recommend Papers for This Project** reads the open manuscript (its title and abstract count most, then the text and the titles already in the `.bib`), searches the sources for its main terms, adds works OpenAlex relates to the papers already cited, ranks everything by text similarity (TF-IDF), and leaves out papers already in the bibliography.
+- Hover a paper for its abstract, journal, identifiers and citation count; click to open it. **+** adds it to the project's `.bib` (asking which one if there are several, or offering to create `references.bib`) and puts `\cite{key}` on the clipboard. Papers already cited show a tick and their key, matched by arXiv ID or DOI.
 
-Entries follow arXiv's recommended form (`eprint`, `archivePrefix`, `primaryClass`, plus `doi` and the journal reference when published), with accented names converted to LaTeX so `pdflatex` handles them. The offline test compiles entries made from real arXiv data with plain, unsrtnat, apsrev4-2 and IEEEtran.
+The entry added is INSPIRE's own when INSPIRE has the paper (looked up by arXiv ID or DOI if it came from another source), so physics bibliographies get the standard keys. Otherwise a published paper is an `@article` with journal, volume, number, pages and DOI, keeping arXiv's `eprint`, `archivePrefix` and `primaryClass` when there's a preprint; a preprint alone is `@misc` in arXiv's recommended form. Accented names are converted to LaTeX so `pdflatex` handles them. The offline test compiles entries made from real records from all five sources with plain, unsrtnat, apsrev4-2, IEEEtran, naturemag, pnas2009 and amsplain.
 
-Requests go only to arXiv's public API (`export.arxiv.org`), at most one every three seconds as arXiv asks. A recommendation sends arXiv a handful of the manuscript's most frequent words, never the manuscript.
+Each source has its own rate limit, below what the service asks (arXiv one request every three seconds, INSPIRE 15 every five seconds), and requests identify themselves only as "TheoremDesk (literature search)". A recommendation sends a handful of the manuscript's most frequent words and the DOIs or arXiv IDs already in its `.bib`, never the manuscript.
 
-The engine (`src/literature.ts`) defines a `LiteratureSource` interface; arXiv is the first source, and Semantic Scholar, PubMed and journal sources can be added alongside it.
+The engine (`src/literature.ts`) merges records and writes BibTeX; each source (`src/sources.ts`) implements the `LiteratureSource` interface, so more can be added. Semantic Scholar was left out because it refuses requests without an API key.
 
 ### The literature MCP server
 
@@ -62,12 +73,13 @@ The same tools are an MCP server, `out/mcp/literatureServer.js` (stdio, no depen
 
 | Tool | Does |
 |---|---|
-| `search_arxiv` | Search arXiv (query, max_results, category, sort) |
+| `search_literature` | Search all sources at once, merged (query, sources, max_results, sort: relevance, recent or cited) |
+| `search_arxiv` | Search arXiv alone, with its own syntax (query, max_results, category, sort) |
 | `recommend_papers` | Recommend papers for a `.tex` file or a description, skipping those in a `.bib` |
-| `get_bibtex` | The BibTeX entry for an arXiv ID or link |
-| `add_to_bibliography` | Add a paper to a `.bib` file (once) and return the key to cite |
+| `get_bibtex` | The BibTeX entry for an arXiv ID or DOI (INSPIRE's own entry when it has the paper) |
+| `add_to_bibliography` | Add a paper, by arXiv ID or DOI, to a `.bib` file (once) and return the key to cite |
 
-Inside TheoremDesk it's offered to agents automatically ("TheoremDesk Literature (arXiv)"). Other agents can run it with TheoremDesk's own runtime, so no separate Node is needed; for example, in an MCP client's configuration:
+Inside TheoremDesk it's offered to agents automatically ("TheoremDesk Literature", with the sources chosen in the Literature view). Elsewhere, `THEOREMDESK_LITERATURE_SOURCES=arxiv,inspire,zbmath,crossref,openalex` picks them (default: all). Other agents can run it with TheoremDesk's own runtime, so no separate Node is needed; for example, in an MCP client's configuration:
 
 ```json
 {

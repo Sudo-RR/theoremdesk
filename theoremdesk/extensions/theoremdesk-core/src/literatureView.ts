@@ -1,11 +1,13 @@
-// The Literature view: recommendations for the open project, arXiv search,
-// and Add to bibliography. Also registers the literature MCP server so
-// agents in the app can use the same tools.
+// The Literature view: recommendations for the open project, search across
+// arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex, and Add to
+// bibliography. Also registers the literature MCP server so agents in the
+// app can use the same tools.
 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { addToBib, ArxivSource, findInBib, Paper, recommend } from './literature';
+import { addToBib, bestForBibliography, displayName, findInBib, LiteratureSource, Paper, recommend, SOURCE_NAMES, SourceId } from './literature';
+import { ALL_SOURCES, createSources, searchAll } from './sources';
 
 type Section = 'recommended' | 'search';
 type Item =
@@ -13,8 +15,26 @@ type Item =
 	| { kind: 'paper'; paper: Paper; score?: number }
 	| { kind: 'note'; label: string; command?: vscode.Command };
 
+const SOURCE_DESCRIPTIONS: Record<SourceId, string> = {
+	arxiv: 'Preprints in physics, mathematics and computer science',
+	inspire: 'High-energy physics, with INSPIRE citation keys and BibTeX',
+	zbmath: 'Mathematics, with reviews and MSC classes',
+	crossref: 'Published journal articles with DOIs',
+	openalex: 'All fields; also finds works related to those you cite',
+};
+
+function enabledSources(): SourceId[] {
+	const configured = vscode.workspace.getConfiguration('theoremdesk.literature').get<string[]>('sources', ALL_SOURCES);
+	const valid = configured.filter((s): s is SourceId => (ALL_SOURCES as string[]).includes(s));
+	return valid.length > 0 ? valid : ALL_SOURCES;
+}
+
+function sourceBadge(paper: Paper): string {
+	return (paper.sources ?? [paper.source]).map((s) => SOURCE_NAMES[s]).join(', ');
+}
+
 export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Disposable {
-	private readonly arxiv = new ArxivSource();
+	private sources: LiteratureSource[] = createSources(enabledSources());
 	private recommended: { paper: Paper; score: number }[] | undefined;
 	private results: Paper[] | undefined;
 	private query: string | undefined;
@@ -23,17 +43,24 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 	private readonly changed = new vscode.EventEmitter<Item | undefined>();
 	readonly onDidChangeTreeData = this.changed.event;
 	private readonly watcher = vscode.workspace.createFileSystemWatcher('**/*.bib');
+	private readonly config: vscode.Disposable;
 
 	constructor() {
 		const reload = () => void this.loadBib().then(() => this.changed.fire(undefined));
 		this.watcher.onDidChange(reload);
 		this.watcher.onDidCreate(reload);
 		this.watcher.onDidDelete(reload);
+		this.config = vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('theoremdesk.literature.sources')) {
+				this.sources = createSources(enabledSources());
+			}
+		});
 		reload();
 	}
 
 	dispose(): void {
 		this.watcher.dispose();
+		this.config.dispose();
 		this.changed.dispose();
 	}
 
@@ -43,6 +70,7 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 			const tree = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.Expanded);
 			tree.contextValue = `section-${item.section}`;
 			tree.iconPath = new vscode.ThemeIcon(item.section === 'recommended' ? 'sparkle' : 'search');
+			tree.tooltip = `Sources: ${this.sources.map((s) => s.name).join(', ')}`;
 			return tree;
 		}
 		if (item.kind === 'note') {
@@ -52,23 +80,38 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 		}
 		const { paper } = item;
 		const tree = new vscode.TreeItem(paper.title, vscode.TreeItemCollapsibleState.None);
-		const authors = paper.authors.length > 2 ? `${paper.authors[0]} et al.` : paper.authors.join(', ');
+		const names = paper.authors.map(displayName);
+		const authors = names.length > 2 ? `${names[0]} et al.` : names.join(', ');
+		const venue = paper.journalShort ?? paper.journal ?? (paper.arxivId ? paper.primaryCategory : undefined);
 		const key = findInBib(this.bibText, paper);
-		tree.description = `${authors} · ${paper.year} · ${paper.primaryCategory}${key ? ` · in bibliography as ${key}` : ''}`;
+		tree.description = [authors, paper.year || undefined, venue, sourceBadge(paper), key ? `in bibliography as ${key}` : undefined]
+			.filter(Boolean)
+			.join(' · ');
 		tree.iconPath = new vscode.ThemeIcon(key ? 'pass-filled' : 'book', key ? new vscode.ThemeColor('testing.iconPassed') : undefined);
 		tree.contextValue = key ? 'paper-cited' : 'paper';
 		const tooltip = new vscode.MarkdownString(undefined, true);
 		tooltip.appendMarkdown(`**${escapeMd(paper.title)}**\n\n`);
-		tooltip.appendMarkdown(`${escapeMd(paper.authors.join(', '))}\n\n`);
-		tooltip.appendMarkdown(
-			`arXiv:${paper.id} · ${paper.primaryCategory} · ${paper.published.slice(0, 10)}${paper.journalRef ? ` · ${escapeMd(paper.journalRef)}` : ''}\n\n`,
-		);
-		tooltip.appendMarkdown(escapeMd(paper.abstract));
+		tooltip.appendMarkdown(`${escapeMd(names.join(', '))}\n\n`);
+		const facts = [
+			paper.journal
+				? `${paper.journal}${paper.volume ? ` ${paper.volume}` : ''}${paper.pages ? `, ${paper.pages}` : ''} (${paper.year})`
+				: paper.journalRef,
+			paper.arxivId ? `arXiv:${paper.arxivId}${paper.primaryCategory ? ` [${paper.primaryCategory}]` : ''}` : undefined,
+			paper.doi ? `doi:${paper.doi}` : undefined,
+			paper.texkey ? `INSPIRE key ${paper.texkey}` : undefined,
+			paper.zbl ? `Zbl ${paper.zbl}` : undefined,
+			paper.citationCount !== undefined ? `${paper.citationCount} citations` : undefined,
+		].filter(Boolean) as string[];
+		tooltip.appendMarkdown(`${facts.map(escapeMd).join(' · ')}\n\n`);
+		if (paper.abstract) {
+			tooltip.appendMarkdown(`${escapeMd(paper.abstract)}\n\n`);
+		}
+		tooltip.appendMarkdown(`*From ${escapeMd(sourceBadge(paper))}*`);
 		if (item.score !== undefined) {
-			tooltip.appendMarkdown(`\n\n*Relevance to this project: ${item.score.toFixed(2)}*`);
+			tooltip.appendMarkdown(` · *relevance to this project: ${item.score.toFixed(2)}*`);
 		}
 		tree.tooltip = tooltip;
-		tree.command = { command: 'theoremdesk.literature.open', title: 'Open on arXiv', arguments: [item] };
+		tree.command = { command: 'theoremdesk.literature.open', title: 'Open Paper', arguments: [item] };
 		return tree;
 	}
 
@@ -84,7 +127,7 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 			return [];
 		}
 		if (this.busy === item.section) {
-			return [{ kind: 'note', label: 'Asking arXiv...' }];
+			return [{ kind: 'note', label: `Asking ${this.sources.map((s) => s.name).join(', ')}...` }];
 		}
 		if (item.section === 'recommended') {
 			if (!this.recommended) {
@@ -105,10 +148,23 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 			: [{ kind: 'note', label: 'No papers found.' }];
 	}
 
+	async chooseSources(): Promise<void> {
+		const enabled = new Set(enabledSources());
+		const picks = await vscode.window.showQuickPick(
+			ALL_SOURCES.map((id) => ({ label: SOURCE_NAMES[id], description: SOURCE_DESCRIPTIONS[id], id, picked: enabled.has(id) })),
+			{ title: 'Search and recommend from', canPickMany: true },
+		);
+		if (picks && picks.length > 0) {
+			await vscode.workspace
+				.getConfiguration('theoremdesk.literature')
+				.update('sources', picks.map((p) => p.id), vscode.ConfigurationTarget.Global);
+		}
+	}
+
 	async search(): Promise<void> {
 		const query = await vscode.window.showInputBox({
-			title: 'Search arXiv',
-			prompt: 'Words that must appear, or arXiv syntax such as au:maldacena AND ti:large',
+			title: `Search ${this.sources.map((s) => s.name).join(', ')}`,
+			prompt: 'Title words, authors or topics, e.g. "large N limit superconformal" or "Bender pendulum"',
 			value: this.query,
 		});
 		if (!query?.trim()) {
@@ -116,7 +172,9 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 		}
 		this.query = query.trim();
 		await this.run('search', async () => {
-			this.results = await this.arxiv.search(this.query!, { maxResults: 25 });
+			const { papers, errors } = await searchAll(this.sources, this.query!, { maxResults: 40 });
+			this.results = papers;
+			this.reportErrors(errors, papers.length === 0);
 		});
 	}
 
@@ -128,8 +186,19 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 		}
 		await this.loadBib();
 		await this.run('recommended', async () => {
-			this.recommended = await recommend(this.arxiv, tex.getText(), this.bibText, { maxResults: 15 });
+			this.recommended = await recommend(this.sources, tex.getText(), this.bibText, { maxResults: 20 });
 		});
+	}
+
+	private reportErrors(errors: { source: SourceId; message: string }[], nothing: boolean): void {
+		if (errors.length === 0) {
+			return;
+		}
+		const which = errors.map((e) => SOURCE_NAMES[e.source]).join(', ');
+		if (nothing && errors.length === this.sources.length) {
+			throw new Error(errors[0].message);
+		}
+		void vscode.window.showWarningMessage(`Couldn't reach ${which}; showing results from the other sources. (${errors[0].message})`);
 	}
 
 	private async run(section: Section, work: () => Promise<void>): Promise<void> {
@@ -140,7 +209,7 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 			await work();
 		} catch (error) {
 			void vscode.window.showErrorMessage(
-				`Couldn't reach arXiv: ${(error as Error).message}. Literature search needs an internet connection.`,
+				`Couldn't reach the literature sources: ${(error as Error).message}. Literature search needs an internet connection.`,
 			);
 		} finally {
 			this.busy = undefined;
@@ -157,7 +226,14 @@ export class LiteratureView implements vscode.TreeDataProvider<Item>, vscode.Dis
 			return;
 		}
 		const current = fs.existsSync(bibFile) ? fs.readFileSync(bibFile, 'utf8') : '';
-		const result = addToBib(current, item.paper);
+		// INSPIRE's own entry (with the key physicists use) when it has the paper.
+		const paper = findInBib(current, item.paper)
+			? item.paper
+			: await vscode.window.withProgress(
+					{ location: { viewId: 'theoremdesk.literature' } },
+					() => bestForBibliography(item.paper, this.sources),
+				);
+		const result = addToBib(current, paper);
 		if (result.added) {
 			fs.writeFileSync(bibFile, result.text);
 		}
@@ -256,7 +332,13 @@ export function registerLiteratureMcpServer(context: vscode.ExtensionContext): v
 		api.lm.registerMcpServerDefinitionProvider('theoremdesk.literature', {
 			// TheoremDesk's own runtime runs the server, so no separate Node is needed.
 			provideMcpServerDefinitions: () => [
-				new Definition('TheoremDesk Literature (arXiv)', process.execPath, [server], { ELECTRON_RUN_AS_NODE: '1' }, '0.1.0'),
+				new Definition(
+					'TheoremDesk Literature',
+					process.execPath,
+					[server],
+					{ ELECTRON_RUN_AS_NODE: '1', THEOREMDESK_LITERATURE_SOURCES: enabledSources().join(',') },
+					'0.2.0',
+				),
 			],
 		}),
 	);

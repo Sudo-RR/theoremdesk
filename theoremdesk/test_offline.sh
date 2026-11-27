@@ -249,25 +249,37 @@ styles_bundled() {
 }
 check "every reference style TheoremDesk recommends is bundled" styles_bundled
 
-# --- BibTeX from arXiv (as Add to Bibliography writes it) compiles ---------
-arxiv_bibtex_compiles() {
-  local dir="${WORK}/arxiv-bib" fixtures="${TD_DIR}/extensions/theoremdesk-core/test/fixtures" style
+# --- BibTeX from every source (as Add to Bibliography writes it) compiles --
+# Real records recorded from arXiv, INSPIRE-HEP (its own BibTeX), zbMATH
+# Open, Crossref and OpenAlex: @misc preprints and @article publications.
+literature_bibtex_compiles() {
+  local dir="${WORK}/literature-bib" fixtures="${TD_DIR}/extensions/theoremdesk-core/test/fixtures" style
   mkdir -p "${dir}" && cd "${dir}" || return 1
   "${NODE}" -e '
-    const L = require(process.argv[1]); const fs = require("fs"); let bib = "";
-    for (const f of process.argv.slice(2)) for (const p of L.parseArxivAtom(fs.readFileSync(f, "utf8"))) bib = L.addToBib(bib, p).text;
-    fs.writeFileSync("refs.bib", bib);' "${OUT}/literature.js" "${fixtures}/arxiv-search.xml" "${fixtures}/arxiv-ids.xml" || return 1
-  for style in plain unsrtnat apsrev4-2 IEEEtran; do
+    const [out, fx] = process.argv.slice(1); const fs = require("fs"); const path = require("path");
+    const L = require(path.join(out, "literature.js")); const S = require(path.join(out, "sources.js"));
+    const read = (f) => fs.readFileSync(path.join(fx, f), "utf8"); const json = (f) => JSON.parse(read(f));
+    const inspire = S.parseInspire(json("inspire-search.json"));
+    inspire[0].bibtex = read("inspire-maldacena.bib");
+    const papers = [
+      ...S.parseArxivAtom(read("arxiv-search.xml")), ...S.parseArxivAtom(read("arxiv-ids.xml")).filter((p) => p.arxivId !== "hep-th/9711200"),
+      ...inspire, ...S.parseZbmath(json("zbmath-search.json")), ...S.parseCrossref(json("crossref-search.json")),
+      ...S.parseOpenalex(json("openalex-search.json")), ...S.parseOpenalex(json("openalex-doi.json")),
+    ];
+    let bib = ""; for (const p of papers) bib = L.addToBib(bib, p).text;
+    if (!/@article\{Maldacena:1997re,/.test(bib) || !/@article\{bender2007complex,/.test(bib)) { console.log("expected INSPIRE and zbMATH entries"); process.exit(1); }
+    fs.writeFileSync("refs.bib", bib);' "${OUT}" "${fixtures}" || return 1
+  for style in plain unsrtnat apsrev4-2 IEEEtran naturemag pnas2009 amsplain; do
     printf '%s\n' '\documentclass{article}' '\usepackage[numbers]{natbib}' '\usepackage{url}' '\begin{document}' \
       '\nocite{*}' "\\bibliographystyle{${style}}" '\bibliography{refs}' '\end{document}' > "${style}.tex"
     pdflatex -interaction=nonstopmode -halt-on-error "${style}" > /dev/null 2>&1 || { echo "${style}: pdflatex failed"; return 1; }
     bibtex "${style}" > "${style}.bibtex.txt" 2>&1 || { echo "${style}: bibtex failed"; cat "${style}.bibtex.txt"; return 1; }
     pdflatex -interaction=nonstopmode -halt-on-error "${style}" > /dev/null 2>&1 || { echo "${style}: pdflatex failed"; grep -m1 -A3 '^!' "${style}.log"; return 1; }
     if grep -E 'Undefined control sequence|Unicode character|Missing character' "${style}.log"; then return 1; fi
-    [[ "$( grep -c '\\bibitem' "${style}.bbl" )" -ge 5 ]] || { echo "${style}: expected 5 entries"; return 1; }
+    [[ "$( grep -c '\\bibitem' "${style}.bbl" )" -ge 15 ]] || { echo "${style}: expected 15 entries"; return 1; }
   done
 }
-check "BibTeX from arXiv compiles with plain, unsrtnat, apsrev4-2 and IEEEtran" arxiv_bibtex_compiles
+check "BibTeX from arXiv, INSPIRE, zbMATH, Crossref and OpenAlex compiles with 7 styles" literature_bibtex_compiles
 
 echo
 echo "TheoremDesk offline test: ${PASSED} passed, ${FAILED} failed"

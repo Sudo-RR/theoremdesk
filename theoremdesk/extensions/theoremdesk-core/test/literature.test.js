@@ -6,10 +6,11 @@ const path = require('node:path');
 const test = require('node:test');
 
 const L = require('../out/literature');
+const S = require('../out/sources');
 
 const fixture = (name) => fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8');
-const search = L.parseArxivAtom(fixture('arxiv-search.xml'));
-const ids = L.parseArxivAtom(fixture('arxiv-ids.xml'));
+const search = S.parseArxivAtom(fixture('arxiv-search.xml'));
+const ids = S.parseArxivAtom(fixture('arxiv-ids.xml'));
 const maldacena = ids.find((p) => p.id === 'hep-th/9711200');
 const vaswani = ids.find((p) => p.id === '1706.03762');
 
@@ -42,10 +43,10 @@ test('arXiv identifiers from text and links', () => {
 });
 
 test('search queries: words, phrases, field syntax and categories', () => {
-	assert.equal(L.arxivSearchQuery('hamiltonian pendulum'), 'all:hamiltonian AND all:pendulum');
-	assert.equal(L.arxivSearchQuery('"double pendulum" chaos'), 'all:"double pendulum" AND all:chaos');
-	assert.equal(L.arxivSearchQuery('au:maldacena AND ti:large'), 'au:maldacena AND ti:large');
-	assert.equal(L.arxivSearchQuery('pendulum', 'math-ph'), '(all:pendulum) AND cat:math-ph');
+	assert.equal(S.arxivSearchQuery('hamiltonian pendulum'), 'all:hamiltonian AND all:pendulum');
+	assert.equal(S.arxivSearchQuery('"double pendulum" chaos'), 'all:"double pendulum" AND all:chaos');
+	assert.equal(S.arxivSearchQuery('au:maldacena AND ti:large'), 'au:maldacena AND ti:large');
+	assert.equal(S.arxivSearchQuery('pendulum', 'math-ph'), '(all:pendulum) AND cat:math-ph');
 });
 
 test('accents and special letters become LaTeX', () => {
@@ -130,7 +131,7 @@ test('recommendations leave out papers already in the bibliography', async () =>
 test('the arXiv client asks politely: one request at a time, spaced out', async () => {
 	const urls = [];
 	const times = [];
-	const source = new L.ArxivSource(async (url) => {
+	const source = new S.ArxivSource(async (url) => {
 		urls.push(url);
 		times.push(Date.now());
 		return fixture('arxiv-search.xml');

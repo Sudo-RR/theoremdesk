@@ -10,6 +10,8 @@ mnras                   # Monthly Notices of the RAS
 ieeetran                # IEEE
 acmart                  # ACM
 llncs                   # Springer LNCS
+nature                  # Nature (naturemag.bst)
+pnas2009                # PNAS (pnas2009.bst)
 
 # Talks and posters
 beamer
