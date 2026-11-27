@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+	<id>@@NAME@@.desktop</id>
+	<metadata_license>MIT</metadata_license>
+	<project_license>MIT</project_license>
+	<name>TheoremDesk</name>
+	<url type="homepage">https://github.com/Sudo-RR/theoremdesk</url>
+	<summary>The open-source scientific IDE for mathematics and theoretical physics</summary>
+	<description>
+		<p>TheoremDesk brings Lean 4, LaTeX, Python, Jupyter and symbolic computation together in one desktop app. Compute, formalise, and check proofs with several independent kernels.</p>
+	</description>
+</component>

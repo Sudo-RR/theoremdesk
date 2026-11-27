@@ -1,3 +1,5 @@
+<p align="center"><img src="../theoremdesk/branding/logo.svg" width="112" alt="TheoremDesk logo: the turnstile ⊢"></p>
+
 # TheoremDesk
 
 **The open-source scientific IDE.** *Compute. Formalise. Discover.*

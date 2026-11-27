@@ -24,7 +24,17 @@
 	"win32TunnelServiceMutex": "theoremdesk-tunnelservice",
 	"win32TunnelMutex": "theoremdesk-tunnel",
 	"win32ContextMenu": {
-		"x64": { "clsid": "FD376670-A646-4878-A07E-229E582DAE9B" },
-		"arm64": { "clsid": "6B563110-E1EA-4AC0-9B4D-EE47F3AA7DC6" }
-	}
+		"x64": {
+			"clsid": "FD376670-A646-4878-A07E-229E582DAE9B"
+		},
+		"arm64": {
+			"clsid": "6B563110-E1EA-4AC0-9B4D-EE47F3AA7DC6"
+		}
+	},
+	"introductoryVideosUrl": null,
+	"tipsAndTricksUrl": null,
+	"twitterUrl": null,
+	"keyboardShortcutsUrlLinux": null,
+	"keyboardShortcutsUrlMac": null,
+	"keyboardShortcutsUrlWin": null
 }

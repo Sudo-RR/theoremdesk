@@ -13,6 +13,7 @@
 		"vscode": "^1.95.0"
 	},
 	"categories": [
+		"Themes",
 		"Other"
 	],
 	"main": "./out/extension.js",
@@ -208,7 +209,17 @@
 			]
 		},
 		"configurationDefaults": {
-			"python.languageServer": "None"
+			"python.languageServer": "None",
+			"workbench.colorTheme": "TheoremDesk Dark",
+			"workbench.preferredDarkColorTheme": "TheoremDesk Dark",
+			"workbench.preferredLightColorTheme": "TheoremDesk Light",
+			"window.autoDetectColorScheme": true,
+			"workbench.tips.enabled": false,
+			"workbench.editor.empty.hint": "hidden",
+			"workbench.layoutControl.enabled": false,
+			"editor.minimap.enabled": false,
+			"editor.unicodeHighlight.ambiguousCharacters": false,
+			"editor.fontFamily": "'JuliaMono', 'Cascadia Code', Consolas, 'DejaVu Sans Mono', monospace"
 		},
 		"walkthroughs": [
 			{
@@ -273,6 +284,18 @@
 						]
 					}
 				]
+			}
+		],
+		"themes": [
+			{
+				"label": "TheoremDesk Dark",
+				"uiTheme": "vs-dark",
+				"path": "./themes/theoremdesk-dark.json"
+			},
+			{
+				"label": "TheoremDesk Light",
+				"uiTheme": "vs",
+				"path": "./themes/theoremdesk-light.json"
 			}
 		]
 	},

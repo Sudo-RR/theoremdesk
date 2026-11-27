@@ -22,9 +22,14 @@ if (!target || !overrides) {
 
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
+/** Deep merge; a `null` in `extra` removes that key (e.g. a Help-menu link). */
 function merge(base, extra) {
 	for (const [key, value] of Object.entries(extra)) {
-		base[key] = isObject(value) && isObject(base[key]) ? merge(base[key], value) : value;
+		if (value === null) {
+			delete base[key];
+		} else {
+			base[key] = isObject(value) && isObject(base[key]) ? merge(base[key], value) : value;
+		}
 	}
 	return base;
 }
@@ -36,6 +41,9 @@ const repo = process.env.GH_REPO_PATH;
 if (repo) {
 	product.licenseUrl = `https://github.com/${repo}/blob/master/LICENSE`;
 	product.reportIssueUrl = `https://github.com/${repo}/issues/new`;
+	product.requestFeatureUrl = `https://github.com/${repo}/issues/new`;
+	product.documentationUrl = `https://github.com/${repo}#readme`;
+	product.releaseNotesUrl = `https://github.com/${repo}/commits/master`;
 }
 
 if (process.env.DISABLE_UPDATE === 'yes') {

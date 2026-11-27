@@ -1,0 +1,11 @@
+{
+	"name": "theoremdesk-branding",
+	"private": true,
+	"description": "Renders TheoremDesk's icons and images from logo.js. Run: npm ci && node generate.js",
+	"scripts": {
+		"generate": "node generate.js"
+	},
+	"devDependencies": {
+		"@resvg/resvg-js": "2.6.2"
+	}
+}
