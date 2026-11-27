@@ -1,0 +1,12 @@
+{
+	"label": "MIT thesis (mitthesis)",
+	"category": "Theses",
+	"description": "Formatted to MIT Libraries' thesis requirements.",
+	"defaultName": "thesis-mit",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"mitthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

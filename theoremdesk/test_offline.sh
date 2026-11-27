@@ -22,6 +22,7 @@
 #           and both template notebooks run
 #   LaTeX   the template manuscript compiles with pdflatex and bibtex,
 #           including the notebooks' generated equations and figures
+#           and so does every LaTeX template (test_templates.sh)
 #
 # Needs Node to run the extension's code (TD_NODE overrides which one).
 
@@ -226,6 +227,27 @@ latex_build() {
   ! grep -E "Citation .* undefined|Reference .* undefined|run .* to generate" main.log
 }
 check "the manuscript compiles with pdflatex and bibtex" latex_build
+
+# --- Every LaTeX template -----------------------------------------------------
+while IFS= read -r line; do
+  echo "${line}"
+  case "${line}" in
+    "  ok    "*) PASSED=$(( PASSED + 1 )) ;;
+    "  FAIL  "*) FAILED=$(( FAILED + 1 )) ;;
+  esac
+done < <( bash "${TD_DIR}/test_templates.sh" "${TEXBIN}" "${PY}" 2>&1 )
+
+# --- Every reference style TheoremDesk recommends exists ---------------------
+styles_bundled() {
+  local missing=() style
+  while IFS= read -r style; do
+    style="${style%$'\r'}"
+    [[ -n "$( kpsewhich "${style}.bst" 2> /dev/null | tr -d '\r' )" ]] || missing+=("${style}")
+  done < <( "${PY}" -c "import json, sys; d = json.load(open(sys.argv[1], encoding='utf-8')); print(chr(10).join(sorted({s['bibstyle'] for s in d['styles']} | {j['bibstyle'] for j in d['journals']})))" \
+    "${TD_DIR}/extensions/theoremdesk-core/data/journals.json" )
+  [[ ${#missing[@]} -eq 0 ]] || { echo "not in the bundled TeX: ${missing[*]}"; return 1; }
+}
+check "every reference style TheoremDesk recommends is bundled" styles_bundled
 
 echo
 echo "TheoremDesk offline test: ${PASSED} passed, ${FAILED} failed"

@@ -20,7 +20,7 @@ DEST="$( cd "${DEST}" && pwd )"
 
 # What a built-in extension needs at runtime. Sources, tests and
 # node_modules (dev dependencies only) stay behind.
-RUNTIME_ITEMS=(package.json package.nls.json README.md LICENSE out media scripts templates themes)
+RUNTIME_ITEMS=(package.json package.nls.json README.md LICENSE out media scripts templates latex-templates data themes)
 
 for EXT in "${TD_DIR}"/extensions/*/; do
   EXT="${EXT%/}"

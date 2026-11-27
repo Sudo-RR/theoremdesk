@@ -1,0 +1,50 @@
+\documentclass{ucbthesis}
+\usepackage{amsmath}
+
+\begin{document}
+
+\title{{{PROJECT_TITLE}}}
+\author{{{AUTHOR}}}
+\degreesemester{Spring}
+\degreeyear{{{YEAR}}}
+\degree{Doctor of Philosophy}
+\chair{Professor Chair Name}
+\othermembers{Professor Member One \\
+  Professor Member Two}
+\numberofmembers{3}
+\field{Physics}
+
+\maketitle
+\approvalpage
+\copyrightpage
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\begin{frontmatter}
+\tableofcontents
+\begin{acknowledgements}
+Thank the people who helped.
+\end{acknowledgements}
+\end{frontmatter}
+
+\pagestyle{headings}
+\chapter{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this~\cite{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\chapter{Background}
+\section{Notation}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+
+\chapter{Conclusion}
+Summarise the thesis and what comes next.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

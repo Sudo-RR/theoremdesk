@@ -1,0 +1,12 @@
+{
+	"label": "Physics paper: APS journals (REVTeX 4.2)",
+	"category": "Research papers",
+	"description": "Physical Review Letters, Physical Review A-E, X and Applied. Switch prl to pra, prb, ... in the class options.",
+	"defaultName": "aps-revtex",
+	"defaultTitle": "A Letter About Something",
+	"texPackages": [
+		"revtex"
+	],
+	"bibstyle": "apsrev4-2",
+	"variables": {}
+}

@@ -1,0 +1,43 @@
+\documentclass[fleqn,usenatbib]{mnras}
+\usepackage{amsmath}
+
+\title[Short title]{{{PROJECT_TITLE}}}
+\author[{{AUTHOR}}]{{{AUTHOR}}$^{1}$\thanks{E-mail: author@example.org}
+\\
+$^{1}$Department, University, City, Country}
+\date{Accepted XXX. Received YYY; in original form ZZZ}
+\pubyear{{{YEAR}}}
+
+\begin{document}
+\label{firstpage}
+\pagerange{\pageref{firstpage}--\pageref{lastpage}}
+\maketitle
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\begin{keywords}
+keyword one -- keyword two
+\end{keywords}
+
+\section{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this: \citet{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\section{Results}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+Equation~\eqref{eq:energy} relates energy and mass.
+
+\section{Conclusion}
+Summarise what you found.
+
+\bibliographystyle{mnras}
+\bibliography{references}
+
+\bsp
+\label{lastpage}
+\end{document}

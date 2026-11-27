@@ -1,0 +1,12 @@
+{
+	"label": "UC Berkeley dissertation (ucbthesis)",
+	"category": "Theses",
+	"description": "Formatted to UC Berkeley Graduate Division requirements.",
+	"defaultName": "thesis-berkeley",
+	"defaultTitle": "Dissertation Title",
+	"texPackages": [
+		"ucbthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

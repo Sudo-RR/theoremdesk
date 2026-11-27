@@ -1,0 +1,12 @@
+{
+	"label": "University of Edinburgh thesis (edmaths)",
+	"category": "Theses",
+	"description": "Formatted to the University of Edinburgh's thesis requirements.",
+	"defaultName": "thesis-edinburgh",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"edmaths"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

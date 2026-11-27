@@ -1,0 +1,10 @@
+{
+	"label": "Mathematics article (AMS)",
+	"category": "Research papers",
+	"description": "amsart: theorem environments, AMS style for journals in mathematics.",
+	"defaultName": "ams-article",
+	"defaultTitle": "A Theorem About Something",
+	"texPackages": [],
+	"bibstyle": "amsplain",
+	"variables": {}
+}

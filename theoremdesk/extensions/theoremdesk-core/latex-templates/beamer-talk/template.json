@@ -1,0 +1,13 @@
+{
+	"label": "Talk slides (Beamer, Metropolis theme)",
+	"category": "Talks and posters",
+	"description": "A clean, modern slide deck for seminars and conference talks.",
+	"defaultName": "beamer-talk",
+	"defaultTitle": "A Talk About Something",
+	"texPackages": [
+		"beamer",
+		"beamertheme-metropolis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

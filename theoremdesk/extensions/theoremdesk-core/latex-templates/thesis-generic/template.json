@@ -1,0 +1,10 @@
+{
+	"label": "Thesis (any university)",
+	"category": "Theses",
+	"description": "A standard report-class thesis: title page, abstract, acknowledgements, contents, chapters.",
+	"defaultName": "thesis-generic",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [],
+	"bibstyle": "plain",
+	"variables": {}
+}

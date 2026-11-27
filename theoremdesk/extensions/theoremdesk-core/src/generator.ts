@@ -12,6 +12,9 @@ export interface TemplateInfo {
 	description: string;
 	defaultName: string;
 	defaultTitle: string;
+	/** For LaTeX templates: the gallery section, and the bibliography style it uses. */
+	category?: string;
+	bibstyle?: string;
 	/** Values for {{NAME}} placeholders, such as pinned toolchain versions. */
 	variables: Record<string, string>;
 }
@@ -32,6 +35,8 @@ export function listTemplates(templatesDir: string): TemplateInfo[] {
 				description: manifest.description,
 				defaultName: manifest.defaultName,
 				defaultTitle: manifest.defaultTitle,
+				category: manifest.category,
+				bibstyle: manifest.bibstyle,
 				variables: manifest.variables ?? {},
 			};
 		});

@@ -1,0 +1,12 @@
+{
+	"label": "Conference poster (tikzposter)",
+	"category": "Talks and posters",
+	"description": "An A0 portrait poster with titled blocks.",
+	"defaultName": "poster",
+	"defaultTitle": "A Poster About Something",
+	"texPackages": [
+		"tikzposter"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

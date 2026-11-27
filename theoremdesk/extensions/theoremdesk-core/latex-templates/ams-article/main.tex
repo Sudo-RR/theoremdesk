@@ -1,0 +1,49 @@
+\documentclass{amsart}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+
+\begin{document}
+
+\title{{{PROJECT_TITLE}}}
+\author{{{AUTHOR}}}
+\address{Department, University, City, Country}
+\email{author@example.org}
+\date{\today}
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this~\cite{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\section{Results}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+Equation~\eqref{eq:energy} relates energy and mass.
+
+\section{Conclusion}
+Summarise what you found.
+
+\begin{theorem}\label{thm:main}
+State the main result here.
+\end{theorem}
+
+\begin{proof}
+Prove it here.
+\end{proof}
+
+\bibliographystyle{amsplain}
+\bibliography{references}
+
+\end{document}

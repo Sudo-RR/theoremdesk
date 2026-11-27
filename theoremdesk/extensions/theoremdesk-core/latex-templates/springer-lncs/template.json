@@ -1,0 +1,12 @@
+{
+	"label": "Springer LNCS",
+	"category": "Conference papers",
+	"description": "Lecture Notes in Computer Science, used by many conferences.",
+	"defaultName": "springer-lncs",
+	"defaultTitle": "A Conference Paper About Something",
+	"texPackages": [
+		"llncs"
+	],
+	"bibstyle": "splncs04",
+	"variables": {}
+}

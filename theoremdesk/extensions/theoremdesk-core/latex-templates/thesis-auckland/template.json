@@ -1,0 +1,12 @@
+{
+	"label": "University of Auckland thesis (aucklandthesis)",
+	"category": "Theses",
+	"description": "Formatted to the University of Auckland's requirements for masters and doctoral theses.",
+	"defaultName": "thesis-auckland",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"aucklandthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

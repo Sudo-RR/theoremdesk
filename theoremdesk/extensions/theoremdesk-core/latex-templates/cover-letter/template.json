@@ -1,0 +1,10 @@
+{
+	"label": "Cover letter to a journal editor",
+	"category": "Reports and submissions",
+	"description": "The letter that goes with a manuscript submission.",
+	"defaultName": "cover-letter",
+	"defaultTitle": "Submission of our manuscript",
+	"texPackages": [],
+	"bibstyle": "",
+	"variables": {}
+}

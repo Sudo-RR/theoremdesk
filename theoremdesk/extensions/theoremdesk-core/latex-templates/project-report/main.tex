@@ -1,0 +1,40 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\title{{{PROJECT_TITLE}}}
+\author{{{AUTHOR}}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Aims}
+What the project set out to do~\cite{einstein1905}.
+
+\section{Method}
+How it was done.
+
+\section{Results}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lr}
+    \toprule
+    Quantity & Value \\
+    \midrule
+    First & 1.0 \\
+    Second & 2.0 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Results.}
+\end{table}
+
+\section{Discussion}
+What the results mean.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

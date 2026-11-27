@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
+import { newLatexDocument, openPendingDocument, setReferenceStyle } from './latex';
 import { MutationView } from './mutation';
 import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
 import { VerificationView } from './verify';
@@ -26,6 +27,8 @@ export function activate(context: vscode.ExtensionContext): void {
 		environment,
 		vscode.window.registerTreeDataProvider('theoremdesk.environment', environment),
 		vscode.window.registerTreeDataProvider('theoremdesk.verification', verification),
+		vscode.commands.registerCommand('theoremdesk.newLatexDocument', () => newLatexDocument(context)),
+		vscode.commands.registerCommand('theoremdesk.setReferenceStyle', () => setReferenceStyle(context)),
 		vscode.commands.registerCommand('theoremdesk.leanBuild', () => verification.buildProject()),
 		vscode.commands.registerCommand('theoremdesk.checkLeanKernel', () => verification.checkWithLeanKernel()),
 		vscode.commands.registerCommand('theoremdesk.verifyKernels', () => verification.verifyProject()),
@@ -84,6 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	void openPendingReadme(context);
+	void openPendingDocument(context);
 }
 
 export function deactivate(): void {}

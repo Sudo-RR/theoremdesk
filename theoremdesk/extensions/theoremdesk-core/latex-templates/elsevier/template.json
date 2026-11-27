@@ -1,0 +1,12 @@
+{
+	"label": "Elsevier journal (elsarticle)",
+	"category": "Research papers",
+	"description": "Physics Letters B, Nuclear Physics B, Journal of Computational Physics and other Elsevier journals.",
+	"defaultName": "elsevier",
+	"defaultTitle": "An Article About Something",
+	"texPackages": [
+		"elsarticle"
+	],
+	"bibstyle": "elsarticle-num",
+	"variables": {}
+}

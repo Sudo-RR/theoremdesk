@@ -1,0 +1,39 @@
+\documentclass[12pt]{ut-thesis}
+\usepackage{amsmath}
+
+\author{{{AUTHOR}}}
+\title{{{PROJECT_TITLE}}}
+\degree{Doctor of Philosophy}
+\department{Physics}
+\gradyear{{{YEAR}}}
+
+\begin{document}
+
+\frontmatter
+\maketitle
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\tableofcontents
+
+\mainmatter
+\chapter{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this~\cite{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\chapter{Background}
+\section{Notation}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+
+\chapter{Conclusion}
+Summarise the thesis and what comes next.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

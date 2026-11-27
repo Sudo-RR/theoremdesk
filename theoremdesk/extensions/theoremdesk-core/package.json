@@ -93,6 +93,18 @@
 				"command": "theoremdesk.repairToolchain",
 				"title": "Repair Built-in Toolchain",
 				"category": "TheoremDesk"
+			},
+			{
+				"command": "theoremdesk.newLatexDocument",
+				"title": "New LaTeX Document from Template...",
+				"category": "TheoremDesk",
+				"icon": "$(new-file)"
+			},
+			{
+				"command": "theoremdesk.setReferenceStyle",
+				"title": "Reference Style for a Journal...",
+				"category": "TheoremDesk",
+				"icon": "$(book)"
 			}
 		],
 		"viewsContainers": {
@@ -138,6 +150,10 @@
 			"file/newFile": [
 				{
 					"command": "theoremdesk.newResearchProject",
+					"group": "file"
+				},
+				{
+					"command": "theoremdesk.newLatexDocument",
 					"group": "file"
 				}
 			],
@@ -211,6 +227,13 @@
 					"when": "resourceLangId == lean4",
 					"group": "navigation@5"
 				}
+			],
+			"editor/title": [
+				{
+					"command": "theoremdesk.setReferenceStyle",
+					"when": "resourceLangId == latex",
+					"group": "navigation@9"
+				}
 			]
 		},
 		"configurationDefaults": {
@@ -275,6 +298,17 @@
 						"completionEvents": [
 							"onCommand:lean4.setup.installElan",
 							"onCommand:lean4.docs.showSetupGuide"
+						]
+					},
+					{
+						"id": "latexTemplates",
+						"title": "Start a paper, thesis or talk",
+						"description": "22 ready-to-compile templates: APS, AMS, Elsevier, MNRAS, IEEE, ACM, Springer LNCS, Beamer, posters, and theses for MIT, Berkeley, Toronto, Edinburgh and more. Everything they need is built in.\n[New LaTeX Document](command:theoremdesk.newLatexDocument)\nAlready writing? Set the reference style your journal expects.\n[Reference Style for a Journal](command:theoremdesk.setReferenceStyle)",
+						"media": {
+							"markdown": "media/walkthrough/latex-templates.md"
+						},
+						"completionEvents": [
+							"onCommand:theoremdesk.newLatexDocument"
 						]
 					},
 					{

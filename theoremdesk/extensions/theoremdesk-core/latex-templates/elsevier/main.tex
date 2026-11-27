@@ -1,0 +1,42 @@
+\documentclass[preprint,12pt]{elsarticle}
+\usepackage{amsmath,amssymb}
+\usepackage[hidelinks]{hyperref}
+
+\journal{Journal Name}
+
+\begin{document}
+
+\begin{frontmatter}
+\title{{{PROJECT_TITLE}}}
+\author[1]{{{AUTHOR}}}
+\affiliation[1]{organization={Department, University},
+  city={City},
+  country={Country}}
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\begin{keyword}
+first keyword \sep second keyword
+\end{keyword}
+\end{frontmatter}
+
+\section{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this~\cite{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\section{Results}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+Equation~\eqref{eq:energy} relates energy and mass.
+
+\section{Conclusion}
+Summarise what you found.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

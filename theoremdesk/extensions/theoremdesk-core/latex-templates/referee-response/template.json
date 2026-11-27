@@ -1,0 +1,10 @@
+{
+	"label": "Response to referees",
+	"category": "Reports and submissions",
+	"description": "A point-by-point reply to the referees' reports for a revised submission.",
+	"defaultName": "referee-response",
+	"defaultTitle": "Response to the referees",
+	"texPackages": [],
+	"bibstyle": "",
+	"variables": {}
+}

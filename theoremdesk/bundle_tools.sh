@@ -21,6 +21,8 @@
 #   e.g. theoremdesk/bundle_tools.sh VSCode-win32-x64/resources win32-x64
 
 set -euo pipefail
+# Stop on errors inside $( ... ) too: every download and value is read that way.
+shopt -s inherit_errexit
 
 TD_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RESOURCES="${1:?usage: bundle_tools.sh <app resources dir> <platform>}"
@@ -35,10 +37,11 @@ if [[ ! -d "${RESOURCES}/app" ]]; then
 fi
 mkdir -p "${CACHE}" "${DEST}"
 
-# JSON is read with Node, or Python 3 where there's no Node.
-if command -v node > /dev/null; then
+# JSON is read with Node, or Python 3 where there's no Node. Each must
+# actually run: on Windows, "python3" may be only the Microsoft Store alias.
+if node -e "0" > /dev/null 2>&1; then
   JSON_TOOL=node
-elif command -v python3 > /dev/null; then
+elif python3 -c "0" > /dev/null 2>&1; then
   JSON_TOOL=python3
 else
   echo "TheoremDesk: bundling needs node or python3 to read tools.json" >&2
@@ -70,6 +73,10 @@ fetch() { # fetch <tool>  ->  prints the cached file path
   local url sha file actual
   url="$( field "$1" url )"
   sha="$( field "$1" sha256 )"
+  if [[ -z "${url}" || ! "${sha}" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "TheoremDesk: tools.json has no valid url and sha256 for $1 on ${PLATFORM}" >&2
+    exit 1
+  fi
   file="${CACHE}/$( basename "${url//%2B/+}" )"
   if [[ ! -f "${file}" ]]; then
     echo "TheoremDesk: downloading $1 from ${url}" >&2
@@ -122,24 +129,16 @@ case "${TEX_ARCHIVE}" in
     TLMGR="$( ls "${DEST}"/tinytex/bin/*/tlmgr | head -1 )"
     ;;
 esac
-# Add only the packages TinyTeX-1 doesn't already have. A TinyTeX release
-# can be older than the TeX Live repository, in which case tlmgr refuses to
-# install anything until it has updated itself.
-KPSEWHICH="$( dirname "${TLMGR}" )/kpsewhich"
-mapfile -t TEX_PACKAGES < <( grep -vE '^\s*(#|$)' "${TD_DIR}/tools/tex-packages.txt" )
-MISSING_TEX=()
-for package in "${TEX_PACKAGES[@]}"; do
-  if [[ -z "$( "${KPSEWHICH}" "${package}.sty" 2> /dev/null | tr -d '\r' )" ]]; then
-    MISSING_TEX+=("${package}")
-  fi
-done
-if [[ ${#MISSING_TEX[@]} -gt 0 ]]; then
-  echo "TheoremDesk: adding TeX packages: ${MISSING_TEX[*]}"
-  "${TLMGR}" update --self > /dev/null
-  "${TLMGR}" install "${MISSING_TEX[@]}" > /dev/null
-else
-  echo "TheoremDesk: TinyTeX already has ${TEX_PACKAGES[*]}"
-fi
+# Bring TinyTeX up to the current TeX Live release first: packages from the
+# repository (like latex-lab) must match the LaTeX kernel they run on, and
+# tlmgr refuses to install anything until it has updated itself. Then add
+# the packages the templates need. test_offline.sh compiles every template.
+mapfile -t TEX_PACKAGES < <( sed -e 's/#.*//' -e 's/[[:space:]]*$//' "${TD_DIR}/tools/tex-packages.txt" | grep -v '^$' )
+echo "TheoremDesk: updating TinyTeX to the current TeX Live"
+"${TLMGR}" update --self > /dev/null
+"${TLMGR}" update --all > /dev/null
+echo "TheoremDesk: adding ${#TEX_PACKAGES[@]} TeX packages for the templates"
+"${TLMGR}" install "${TEX_PACKAGES[@]}" > /dev/null
 
 # --- Lean -----------------------------------------------------------------
 ELAN_ARCHIVE="$( fetch elan )"

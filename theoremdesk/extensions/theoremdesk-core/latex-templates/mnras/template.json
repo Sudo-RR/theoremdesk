@@ -1,0 +1,12 @@
+{
+	"label": "Astronomy: Monthly Notices of the RAS",
+	"category": "Research papers",
+	"description": "The MNRAS class, with author-year citations.",
+	"defaultName": "mnras",
+	"defaultTitle": "A Study of Something",
+	"texPackages": [
+		"mnras"
+	],
+	"bibstyle": "mnras",
+	"variables": {}
+}

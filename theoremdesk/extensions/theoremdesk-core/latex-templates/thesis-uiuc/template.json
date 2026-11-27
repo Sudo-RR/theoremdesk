@@ -1,0 +1,12 @@
+{
+	"label": "University of Illinois thesis (uiucthesis)",
+	"category": "Theses",
+	"description": "Formatted to the UIUC Graduate College requirements.",
+	"defaultName": "thesis-uiuc",
+	"defaultTitle": "Dissertation Title",
+	"texPackages": [
+		"uiucthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

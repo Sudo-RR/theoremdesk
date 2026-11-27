@@ -1,0 +1,12 @@
+{
+	"label": "University of Washington thesis (uwthesis)",
+	"category": "Theses",
+	"description": "Formatted to the UW Graduate School requirements.",
+	"defaultName": "thesis-washington",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"uwthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

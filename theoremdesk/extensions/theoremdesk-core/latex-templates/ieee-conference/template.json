@@ -1,0 +1,12 @@
+{
+	"label": "IEEE conference",
+	"category": "Conference papers",
+	"description": "IEEEtran in conference mode, with IEEE reference style.",
+	"defaultName": "ieee-conference",
+	"defaultTitle": "A Conference Paper About Something",
+	"texPackages": [
+		"ieeetran"
+	],
+	"bibstyle": "IEEEtran",
+	"variables": {}
+}

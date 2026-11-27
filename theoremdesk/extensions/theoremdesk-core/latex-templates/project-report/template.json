@@ -1,0 +1,10 @@
+{
+	"label": "Project or lab report",
+	"category": "Reports and submissions",
+	"description": "A short structured report: aims, method, results, discussion.",
+	"defaultName": "project-report",
+	"defaultTitle": "Project Report",
+	"texPackages": [],
+	"bibstyle": "plain",
+	"variables": {}
+}

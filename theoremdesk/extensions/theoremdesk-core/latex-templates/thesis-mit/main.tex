@@ -1,0 +1,39 @@
+\DocumentMetadata{lang=en-US, pdfversion=1.7}
+\documentclass[twoside]{mitthesis}
+
+\begin{document}
+
+\title{{{PROJECT_TITLE}}}
+\Author{{{AUTHOR}}}{Department of Physics}
+\Degree{Doctor of Philosophy in Physics}{Department of Physics}
+\Supervisor{Supervisor Name}{Professor of Physics}
+\Acceptor{Acceptor Name}{Professor of Physics}{Graduate Officer, Department of Physics}
+\DegreeDate{May}{{{YEAR}}}
+\ThesisDate{May 1, {{YEAR}}}
+
+\maketitle
+
+\begin{abstract}
+Write a short summary of the question, the method and the main result.
+\end{abstract}
+
+\tableofcontents
+
+\chapter{Introduction}
+Write your introduction here. Cite sources from \texttt{references.bib} like
+this~\cite{einstein1905}, and see the \LaTeX{} manual~\cite{lamport1994}.
+
+\chapter{Background}
+\section{Notation}
+Number important equations so you can refer to them:
+\begin{equation}
+  E = mc^2 . \label{eq:energy}
+\end{equation}
+
+\chapter{Conclusion}
+Summarise the thesis and what comes next.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

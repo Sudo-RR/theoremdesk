@@ -1,0 +1,12 @@
+{
+	"label": "Physics PhD thesis (hepthesis)",
+	"category": "Theses",
+	"description": "A thesis class designed for physics PhDs, from high-energy physics.",
+	"defaultName": "thesis-hepthesis",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"hepthesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

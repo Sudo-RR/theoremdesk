@@ -1,0 +1,10 @@
+{
+	"label": "arXiv preprint",
+	"category": "Research papers",
+	"description": "A clean article for posting to arXiv before (or instead of) journal formatting.",
+	"defaultName": "arxiv-preprint",
+	"defaultTitle": "A Preprint About Something",
+	"texPackages": [],
+	"bibstyle": "unsrtnat",
+	"variables": {}
+}

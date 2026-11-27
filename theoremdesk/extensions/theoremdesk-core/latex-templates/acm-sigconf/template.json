@@ -1,0 +1,12 @@
+{
+	"label": "ACM conference (acmart sigconf)",
+	"category": "Conference papers",
+	"description": "ACM proceedings format, with ACM reference style.",
+	"defaultName": "acm-sigconf",
+	"defaultTitle": "A Conference Paper About Something",
+	"texPackages": [
+		"acmart"
+	],
+	"bibstyle": "ACM-Reference-Format",
+	"variables": {}
+}

@@ -1,0 +1,12 @@
+{
+	"label": "University of Toronto thesis (ut-thesis)",
+	"category": "Theses",
+	"description": "Formatted to the School of Graduate Studies requirements.",
+	"defaultName": "thesis-toronto",
+	"defaultTitle": "Thesis Title",
+	"texPackages": [
+		"ut-thesis"
+	],
+	"bibstyle": "plain",
+	"variables": {}
+}

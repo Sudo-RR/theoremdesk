@@ -1,3 +1,61 @@
-# TeX Live packages added to the bundled TinyTeX, beyond what TinyTeX-1 ships.
-# Grow this list when a template's manuscript needs more.
+# TeX Live packages added to the bundled TinyTeX, beyond what TinyTeX-1
+# ships. Every LaTeX template must compile offline with exactly this set:
+# test_offline.sh compiles them all, and build.sh fails the build if one
+# doesn't. Add a template's packages here when adding a template.
+
+# Journal and conference classes
+revtex                  # APS physics journals (REVTeX 4.2)
+elsarticle              # Elsevier
+mnras                   # Monthly Notices of the RAS
+ieeetran                # IEEE
+acmart                  # ACM
+llncs                   # Springer LNCS
+
+# Talks and posters
+beamer
+beamertheme-metropolis
+tikzposter
+a0poster
+
+# Thesis classes
+hepthesis
+mitthesis
+ucbthesis
+ut-thesis
+uwthesis
+edmaths
+aucklandthesis
+uiucthesis
+memoir                  # aucklandthesis, ucbthesis
+koma-script             # hepthesis
+
+# Dependencies the classes above use but don't declare
+ae
+aliascnt
 booktabs
+caption
+changepage
+cite
+cmap
+comment
+courier
+csquotes
+doi
+environ
+everyshi
+extsizes
+fancyhdr
+grfext
+hyperxmp
+latex-lab               # \DocumentMetadata, used by mitthesis
+lm                      # Latin Modern (scalable fonts)
+mathtools
+microtype
+ncctools
+preprint
+setspace
+textcase
+tocbibind
+totpages
+varwidth
+xstring
