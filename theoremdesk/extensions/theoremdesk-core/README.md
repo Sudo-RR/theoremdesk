@@ -28,6 +28,19 @@ The sandbox is `bwrap`, which needs Linux:
 
 The checks need Lean v4.35.0 or later, where `lake check` and `lake comparator` became part of Lean.
 
+## Mutation testing: does the Lean code verify what you meant?
+
+**Mutation Test This File** is the fifth mode of the Run button on Lean files. TheoremDesk makes small changes (mutants) to the open file and compiles each one with `lake env lean`, several at a time:
+
+- **Definitions** (`def`, `abbrev`, `instance` bodies): `cos` ↔ `sin`, `min` ↔ `max`, `+` ↔ `-`, `*` ↔ `/`, `<`/`≤`/`>`/`≥`, `=` ↔ `≠`, `∧` ↔ `∨`, numbers ±1. Some theorem should stop compiling. If none does, no theorem constrains that part of the definition.
+- **Theorem statements**, keeping each proof: dropping a hypothesis binder, plus the operators above. The proof should break. A survivor means the hypothesis is unused, or the conclusion says less than intended, or the hypotheses contradict each other.
+
+Statement mutants that only make the statement weaker are skipped, because the old proof may still work by logic alone: a weaker conclusion (`<` → `≤`, `∧` → `∨`), a stronger hypothesis (`≤` → `<`), or a flipped hypothesis, which usually contradicts the others. Number changes can't be classed as stronger or weaker, so some of their survivors are noise.
+
+Each mutant is **killed** (a proof broke), **survived**, **stillborn** (the mutant itself doesn't elaborate), or **timed out**. Survivors appear in the **Mutations** view and as warnings in the editor at the exact spot; click one to compare the mutant with your file. Theorems proved by `sorry` can't catch anything, so they're skipped and listed.
+
+The file must compile first; build the project (`lake build`) before testing. Prior art: [Mutate.lean](https://github.com/jubnzv/Mutate.lean) (definitions; no licence, so not bundled), [Specmut](https://github.com/TylerRector/Specmut) and [lean-audit](https://github.com/Futlas/lean-audit) (statements).
+
 ## Developing
 
 ```bash

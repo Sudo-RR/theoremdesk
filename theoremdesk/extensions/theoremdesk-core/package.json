@@ -76,6 +76,17 @@
 				"title": "Check Proof Against Statement...",
 				"category": "TheoremDesk",
 				"icon": "$(git-compare)"
+			},
+			{
+				"command": "theoremdesk.mutationTest",
+				"title": "Mutation Test This File",
+				"category": "TheoremDesk",
+				"icon": "$(beaker)"
+			},
+			{
+				"command": "theoremdesk.mutations.showDiff",
+				"title": "Compare Mutant with File",
+				"category": "TheoremDesk"
 			}
 		],
 		"viewsContainers": {
@@ -96,6 +107,10 @@
 				{
 					"id": "theoremdesk.verification",
 					"name": "Verification"
+				},
+				{
+					"id": "theoremdesk.mutations",
+					"name": "Mutations"
 				}
 			]
 		},
@@ -107,6 +122,10 @@
 			{
 				"view": "theoremdesk.verification",
 				"contents": "Check your Lean project with Lean's kernel, or with Lean's kernel and five independent checkers. A proof that exploits a bug in one kernel is caught by the others. Both run sandboxed and allow only the standard axioms.\n[Check with Lean Kernel](command:theoremdesk.checkLeanKernel)\n[Verify with All Kernels](command:theoremdesk.verifyKernels)\nCheck that a proof, such as one the research agent wrote, proves exactly the statement you wrote:\n[Check Proof Against Statement](command:theoremdesk.checkProof)\nThe Run button on Lean files offers all of these."
+			},
+			{
+				"view": "theoremdesk.mutations",
+				"contents": "Check that your Lean code verifies what you meant. TheoremDesk makes small changes (mutants) to the open file, then compiles each one:\n- a changed definition (cos → sin, + → -, 2 → 3) should make some theorem fail\n- a changed statement (a hypothesis dropped, < → ≤) should break its proof\nMutants that survive show where your theorems don't pin down what you intended.\n[Mutation Test This File](command:theoremdesk.mutationTest)"
 			}
 		],
 		"menus": {
@@ -136,6 +155,11 @@
 					"command": "theoremdesk.checkProof",
 					"when": "view == theoremdesk.verification",
 					"group": "navigation@3"
+				},
+				{
+					"command": "theoremdesk.mutationTest",
+					"when": "view == theoremdesk.mutations",
+					"group": "navigation"
 				}
 			],
 			"view/item/context": [
@@ -148,6 +172,10 @@
 			"commandPalette": [
 				{
 					"command": "theoremdesk.environment.fix",
+					"when": "false"
+				},
+				{
+					"command": "theoremdesk.mutations.showDiff",
 					"when": "false"
 				}
 			],
@@ -171,6 +199,11 @@
 					"command": "theoremdesk.checkProof",
 					"when": "resourceLangId == lean4",
 					"group": "navigation@4"
+				},
+				{
+					"command": "theoremdesk.mutationTest",
+					"when": "resourceLangId == lean4",
+					"group": "navigation@5"
 				}
 			]
 		},

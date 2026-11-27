@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
+import { MutationView } from './mutation';
 import { VerificationView } from './verify';
 
 const WALKTHROUGH_ID = 'gettingStarted';
@@ -14,8 +15,13 @@ export function activate(context: vscode.ExtensionContext): void {
 	const templatesDir = context.asAbsolutePath('templates');
 	const environment = new EnvironmentView(context.asAbsolutePath(path.join('scripts', 'wsl-setup.sh')));
 	const verification = new VerificationView(context.asAbsolutePath(path.join('scripts', 'wsl-verify.sh')));
+	const mutations = new MutationView();
 
 	context.subscriptions.push(
+		mutations,
+		vscode.window.registerTreeDataProvider('theoremdesk.mutations', mutations),
+		vscode.commands.registerCommand('theoremdesk.mutationTest', () => mutations.run()),
+		vscode.commands.registerCommand('theoremdesk.mutations.showDiff', (source, result) => mutations.showDiff(source, result)),
 		environment,
 		vscode.window.registerTreeDataProvider('theoremdesk.environment', environment),
 		vscode.window.registerTreeDataProvider('theoremdesk.verification', verification),
