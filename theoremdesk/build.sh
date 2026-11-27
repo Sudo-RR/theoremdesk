@@ -10,6 +10,7 @@
 # Flags:
 #   -s  reuse the VS Code source already in ./vscode instead of fetching it again
 #   -n  don't bundle the extensions from theoremdesk/extensions.json
+#       (TheoremDesk's own extensions in theoremdesk/extensions/ are always built)
 #
 # This follows VSCodium's documented downstream build (export the variables,
 # then get_repo.sh and build.sh) rather than dev/build.sh, which hardcodes
@@ -110,6 +111,8 @@ fi
 if [[ "${SKIP_EXTENSIONS}" == "no" ]]; then
   bash theoremdesk/bundle_extensions.sh "${EXTENSIONS_DIR}" "${PLATFORM}-${VSCODE_ARCH}"
 fi
+
+bash theoremdesk/build_local_extensions.sh "${EXTENSIONS_DIR}"
 
 { set +x; } 2> /dev/null
 echo "TheoremDesk: build finished in ./${APP_DIR}"

@@ -1,0 +1,7 @@
+sympy>=1.13
+numpy>=2.0
+scipy>=1.13
+matplotlib>=3.9
+plotly>=5.24
+nbformat>=5.10
+ipykernel>=6.29

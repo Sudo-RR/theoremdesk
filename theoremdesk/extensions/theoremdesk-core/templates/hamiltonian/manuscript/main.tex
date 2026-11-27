@@ -1,0 +1,92 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+% A Lean declaration, printed as code.
+\newcommand{\leanref}[1]{\texttt{\detokenize{#1}}}
+% Text a notebook generates (#1), or a note naming the notebook to run (#2).
+\newcommand{\generated}[2]{%
+  \IfFileExists{#1}{\input{#1}}{\textit{[run \texttt{\detokenize{#2}} to generate this]}}}
+% A figure a notebook generates (#1), or a placeholder naming the notebook (#2).
+\newcommand{\generatedfigure}[2]{%
+  \IfFileExists{#1}{\includegraphics[width=0.6\linewidth]{#1}}%
+  {\fbox{\parbox{0.6\linewidth}{\centering\vspace{3em}\textit{Run \texttt{\detokenize{#2}} to generate this figure.}\vspace{3em}}}}}
+
+\title{{{PROJECT_TITLE}}}
+\author{}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We derive Hamilton's equations for the simple harmonic oscillator and the nonlinear pendulum, integrate them numerically, and compare the pendulum's period with the exact elliptic-integral formula. Each result states how it is supported: proven in Lean, computed symbolically, or checked numerically.
+\end{abstract}
+
+\section{The harmonic oscillator}
+
+A particle of mass $m$ on a spring of stiffness $k$ has Hamiltonian
+\begin{equation}
+  H(q, p) = \frac{p^2}{2m} + \frac{k q^2}{2}.
+\end{equation}
+Hamilton's equations, computed symbolically in \texttt{\detokenize{notebooks/01_oscillator.ipynb}}, are
+\generated{generated/oscillator_eom.tex}{notebooks/01_oscillator.ipynb}
+
+Energy is conserved along every smooth solution. This is proven in Lean as \leanref{ClassicalMechanics.HarmonicOscillator.energy_conservation_of_equationOfMotion'} in Physlib~\cite{physlib}, which builds on Mathlib~\cite{mathlib}. Numerically, the largest energy drift over the trajectories in Figure~\ref{fig:oscillator} is \generated{generated/oscillator_drift.tex}{notebooks/01_oscillator.ipynb}.
+
+\begin{figure}[ht]
+  \centering
+  \generatedfigure{figures/oscillator_phase.pdf}{notebooks/01_oscillator.ipynb}
+  \caption{Phase-space trajectories of the harmonic oscillator ($m = k = 1$).}
+  \label{fig:oscillator}
+\end{figure}
+
+\section{The nonlinear pendulum}
+
+A pendulum of mass $m$ on a rod of length $L$ under gravity $g$, with angle $\theta$ from the downward vertical, has Hamiltonian
+\begin{equation}
+  H(\theta, p) = \frac{p^2}{2 m L^2} - m g L \cos\theta,
+\end{equation}
+and equations of motion
+\generated{generated/pendulum_eom.tex}{notebooks/02_pendulum.ipynb}
+
+Released from rest at amplitude $\theta_0$, its period is
+\begin{equation}
+  T(\theta_0) = 4 \sqrt{\frac{L}{g}}\, K\!\left(\sin^2\frac{\theta_0}{2}\right),
+\end{equation}
+where $K(m) = \int_0^{\pi/2} (1 - m \sin^2\phi)^{-1/2}\, d\phi$ is the complete elliptic integral of the first kind. Integrating the equations of motion numerically reproduces this formula to a relative difference of at most \generated{generated/pendulum_period_check.tex}{notebooks/02_pendulum.ipynb} (Figure~\ref{fig:pendulum}).
+
+Energy conservation for the pendulum is stated in Lean as \leanref{Hamiltonian.Pendulum.energy_conserved} but not yet proved.
+
+\begin{figure}[ht]
+  \centering
+  \generatedfigure{figures/pendulum_period.pdf}{notebooks/02_pendulum.ipynb}
+  \caption{Pendulum period against amplitude, relative to the small-angle period $2\pi\sqrt{L/g}$.}
+  \label{fig:pendulum}
+\end{figure}
+
+\section{Evidence}
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+  \toprule
+  Claim & Status & Source \\
+  \midrule
+  Oscillator equations of motion & computed & \texttt{\detokenize{01_oscillator.ipynb}} \\
+  Oscillator energy conservation & proven & Physlib \\
+  Oscillator energy drift & numerical & \texttt{\detokenize{01_oscillator.ipynb}} \\
+  Pendulum equations of motion & computed & \texttt{\detokenize{02_pendulum.ipynb}} \\
+  Pendulum period formula & numerical check & \texttt{\detokenize{02_pendulum.ipynb}} \\
+  Pendulum energy conservation & stated, not proved & \texttt{\detokenize{Pendulum.lean}} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

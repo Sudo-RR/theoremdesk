@@ -1,0 +1,111 @@
+{
+	"name": "theoremdesk-core",
+	"displayName": "TheoremDesk",
+	"description": "Research projects, onboarding and research-friendly defaults for TheoremDesk.",
+	"version": "0.1.0",
+	"publisher": "theoremdesk",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Sudo-RR/theoremdesk"
+	},
+	"engines": {
+		"vscode": "^1.95.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"scripts": {
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"test": "npm run compile && node --test \"test/**/*.test.js\""
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "theoremdesk.newResearchProject",
+				"title": "New Research Project...",
+				"category": "TheoremDesk"
+			},
+			{
+				"command": "theoremdesk.openGettingStarted",
+				"title": "Get Started",
+				"category": "TheoremDesk"
+			}
+		],
+		"menus": {
+			"file/newFile": [
+				{
+					"command": "theoremdesk.newResearchProject",
+					"group": "file"
+				}
+			]
+		},
+		"configurationDefaults": {
+			"python.languageServer": "None"
+		},
+		"walkthroughs": [
+			{
+				"id": "gettingStarted",
+				"title": "Get started with TheoremDesk",
+				"description": "Create a research project, then set up Python, Lean and LaTeX for it.",
+				"steps": [
+					{
+						"id": "newProject",
+						"title": "Create a research project",
+						"description": "Start from the Hamiltonian mechanics reference project: SymPy and SciPy notebooks, a Lean project on Physlib, and a LaTeX manuscript that includes the notebooks' results.\n[New Research Project](command:theoremdesk.newResearchProject)",
+						"media": {
+							"markdown": "media/walkthrough/new-project.md"
+						},
+						"completionEvents": [
+							"onCommand:theoremdesk.newResearchProject"
+						]
+					},
+					{
+						"id": "python",
+						"title": "Set up Python",
+						"description": "Create a virtual environment for the project and install its requirements.txt.\n[Create Environment](command:python.createEnvironment)",
+						"media": {
+							"markdown": "media/walkthrough/python.md"
+						},
+						"completionEvents": [
+							"onCommand:python.createEnvironment"
+						]
+					},
+					{
+						"id": "lean",
+						"title": "Install Lean",
+						"description": "Install elan, Lean's version manager. Each project pins the Lean version its libraries need.\n[Install Lean](command:lean4.setup.installElan)\n[Open the Lean setup guide](command:lean4.docs.showSetupGuide)",
+						"media": {
+							"markdown": "media/walkthrough/lean.md"
+						},
+						"completionEvents": [
+							"onCommand:lean4.setup.installElan",
+							"onCommand:lean4.docs.showSetupGuide"
+						]
+					},
+					{
+						"id": "latex",
+						"title": "Install a TeX distribution",
+						"description": "The manuscript needs a TeX distribution such as MiKTeX or TeX Live. Once one is installed, open manuscript/main.tex and build it.\n[Build Manuscript](command:latex-workshop.build)",
+						"media": {
+							"markdown": "media/walkthrough/latex.md"
+						},
+						"completionEvents": [
+							"onCommand:latex-workshop.build"
+						]
+					}
+				]
+			}
+		]
+	},
+	"devDependencies": {
+		"@types/node": "^24.19.4",
+		"@types/vscode": "~1.95.0",
+		"typescript": "~5.9.3"
+	}
+}

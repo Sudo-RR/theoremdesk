@@ -14,6 +14,8 @@ Everything specific to TheoremDesk lives in this folder. Outside it there are tw
 | `prepare.sh` | The hook. Copies resources from `src/stable/`, runs the merge, and replaces the "VSCodium" names VSCodium wrote into package and installer metadata. |
 | `extensions.json` | Extensions bundled as built-in, pinned to exact Open VSX versions. |
 | `bundle_extensions.sh` | Downloads those extensions, checks each against Open VSX's SHA-256, and unpacks them into the built app. |
+| `extensions/` | TheoremDesk's own extensions, compiled and installed as built-ins. `theoremdesk-core` adds New Research Project, the getting-started walkthrough and research defaults. |
+| `build_local_extensions.sh` | Compiles `extensions/*` and installs them into a built app. Run it on its own to update an existing build. |
 | `check_prereqs.sh` | Lists missing build tools with the command to install each. |
 | `build.sh` | Local build: prerequisites, fetch, patch, compile, bundle extensions. |
 | `src/stable/` | TheoremDesk icons and resources, at the same paths as VSCodium's `src/stable/` (e.g. `resources/win32/code.ico`). Empty until there is a logo. |
@@ -29,6 +31,12 @@ bash theoremdesk/check_prereqs.sh   # see what's missing
 bash theoremdesk/build.sh           # full build
 bash theoremdesk/build.sh -s        # rebuild using the VS Code source already in ./vscode
 bash theoremdesk/build.sh -n        # skip bundling extensions
+```
+
+To update only TheoremDesk's own extensions in an existing build, then restart the app:
+
+```bash
+bash theoremdesk/build_local_extensions.sh VSCode-win32-x64/resources/app/extensions
 ```
 
 The app lands in `VSCode-<platform>-<arch>/`. On Windows, start `VSCode-win32-x64/TheoremDesk.exe`. A full build downloads the VS Code source, runs `npm ci` and compiles everything, so expect a long first run and plenty of disk use.

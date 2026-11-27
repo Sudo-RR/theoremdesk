@@ -1,0 +1,12 @@
+name = "Hamiltonian"
+defaultTargets = ["Hamiltonian"]
+
+# Physlib brings in Mathlib. Its release tags match Lean versions, so keep
+# `rev` and lean-toolchain in step when upgrading.
+[[require]]
+name = "Physlib"
+git = "https://github.com/leanprover-community/physlib.git"
+rev = "{{PHYSLIB_REV}}"
+
+[[lean_lib]]
+name = "Hamiltonian"

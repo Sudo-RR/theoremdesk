@@ -1,0 +1,10 @@
+{
+	"label": "Hamiltonian mechanics (reference project)",
+	"description": "Harmonic oscillator and nonlinear pendulum: SymPy and SciPy notebooks, a Lean project on Physlib, and a LaTeX manuscript.",
+	"defaultName": "hamiltonian-mechanics",
+	"defaultTitle": "Hamiltonian Mechanics: the Oscillator and the Pendulum",
+	"variables": {
+		"LEAN_TOOLCHAIN": "leanprover/lean4:v4.36.0",
+		"PHYSLIB_REV": "v4.36.0"
+	}
+}

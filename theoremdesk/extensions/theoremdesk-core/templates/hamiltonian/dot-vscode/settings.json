@@ -1,0 +1,11 @@
+{
+	"files.watcherExclude": {
+		"**/.lake/**": true
+	},
+	"search.exclude": {
+		"**/.lake": true,
+		"manuscript/build": true
+	},
+	"latex-workshop.latex.outDir": "%DIR%/build",
+	"jupyter.notebookFileRoot": "${workspaceFolder}"
+}
