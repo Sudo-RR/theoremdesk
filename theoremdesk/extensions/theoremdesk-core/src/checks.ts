@@ -51,6 +51,12 @@ export interface Env {
 	workspace?: string;
 	/** Windows path of scripts/wsl-setup.sh, for the WSL kernel-check setup fix. */
 	wslSetupScript?: string;
+	/** TheoremDesk's own elan home, when it bundles Lean. */
+	elanHome?: string;
+	/** Results of checking the built-in toolchain; replaces the Git, Python, Lean and TeX rows. */
+	bundledStatus?: { id: string; label: string; ok: boolean; detail: string }[];
+	/** The Python bundled with TheoremDesk, if this build has one. */
+	bundledPython?: string;
 }
 
 /** A tool found on PATH, or installed somewhere this window's PATH doesn't reach yet. */
@@ -168,6 +174,10 @@ async function checkPython(env: Env, python: Tool | undefined): Promise<CheckRes
 }
 
 function elanBin(env: Env): string {
+	// TheoremDesk's own elan home when it has one, else the usual ~/.elan.
+	if (env.elanHome) {
+		return path.join(env.elanHome, 'bin');
+	}
 	return path.join(env.home, '.elan', 'bin');
 }
 
@@ -488,21 +498,25 @@ async function checkPythonProject(env: Env, workspace: string, python: Tool | un
 	const base = { id: 'venv', group: 'project' as const, label: 'Python environment (.venv)' };
 
 	if (!env.exists(venvPython)) {
+		// With the bundled Python, the environment reuses its packages
+		// instead of downloading them: pip then finds requirements.txt
+		// already satisfied.
+		const bundled = env.bundledPython && env.exists(env.bundledPython) ? env.bundledPython : undefined;
+		const create: Step | undefined = bundled
+			? { label: 'Create .venv', command: bundled, args: ['-m', 'venv', '--system-site-packages', '.venv'], cwd: workspace }
+			: python
+				? { label: 'Create .venv', command: python.command, args: [...python.prefixArgs, '-m', 'venv', '.venv'], cwd: workspace }
+				: undefined;
 		return [
 			{
 				...base,
 				status: 'missing',
-				detail: python ? 'Create .venv and install requirements.txt.' : 'Install Python first.',
-				fix: python
-					? {
-							kind: 'steps',
-							label: 'Create environment',
-							steps: [
-								{ label: 'Create .venv', command: python.command, args: [...python.prefixArgs, '-m', 'venv', '.venv'], cwd: workspace },
-								installRequirements,
-							],
-						}
-					: undefined,
+				detail: create
+					? bundled
+						? "Create .venv from TheoremDesk's Python. Its packages are already there, so nothing downloads."
+						: 'Create .venv and install requirements.txt.'
+					: 'Install Python first.',
+				fix: create ? { kind: 'steps', label: 'Create environment', steps: [create, installRequirements] } : undefined,
 			},
 		];
 	}
@@ -533,11 +547,20 @@ export async function runChecks(env: Env): Promise<CheckResult[]> {
 		findElan(env),
 	]);
 
+	// With a built-in toolchain, Git, Python, Lean and TeX are TheoremDesk's
+	// own: show their verified status, with Repair, instead of installers.
+	const builtIn: CheckResult[] = (env.bundledStatus ?? []).map((s) => ({
+		id: `builtin-${s.id}`,
+		group: 'tools',
+		label: `${s.label} (built in)`,
+		status: s.ok ? 'ok' : 'missing',
+		detail: s.ok ? s.detail : `${s.detail} Repair re-copies and re-checks the built-in tools.`,
+		fix: s.ok ? undefined : { kind: 'vscodeCommand', label: 'Repair', command: 'theoremdesk.repairToolchain' },
+	}));
 	const tools = await Promise.all([
-		checkGit(env),
-		checkPython(env, python),
-		Promise.resolve(checkElan(elan)),
-		checkTex(env),
+		...(env.bundledStatus
+			? builtIn.map((r) => Promise.resolve(r))
+			: [checkGit(env), checkPython(env, python), Promise.resolve(checkElan(elan)), checkTex(env)]),
 		checkLongPaths(env, Boolean(git)),
 		checkKernelSandbox(env),
 	]);

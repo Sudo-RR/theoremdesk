@@ -1,0 +1,3 @@
+# TeX Live packages added to the bundled TinyTeX, beyond what TinyTeX-1 ships.
+# Grow this list when a template's manuscript needs more.
+booktabs

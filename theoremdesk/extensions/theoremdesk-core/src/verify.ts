@@ -6,6 +6,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { activeElanHome } from './tools';
 import { runInTerminal } from './environment';
 import {
 	comparatorConfig,
@@ -179,7 +180,7 @@ export class VerificationView implements vscode.TreeDataProvider<Item> {
 	}
 
 	private async run(title: string, leanDir: string, mode: VerifyMode): Promise<void> {
-		const command = verificationCommand(process.platform, os.homedir(), leanDir, this.wslVerifyScript, mode);
+		const command = verificationCommand(process.platform, activeElanHome(), leanDir, this.wslVerifyScript, mode);
 		if ('unsupported' in command) {
 			void vscode.window.showWarningMessage(command.unsupported);
 			return;

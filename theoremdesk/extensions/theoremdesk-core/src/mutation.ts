@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { activeElanHome } from './tools';
 import {
 	applyMutant,
 	classify,
@@ -165,7 +166,7 @@ export class MutationView implements vscode.TreeDataProvider<Item>, vscode.Dispo
 			return;
 		}
 
-		const lake = path.join(os.homedir(), '.elan', 'bin', process.platform === 'win32' ? 'lake.exe' : 'lake');
+		const lake = path.join(activeElanHome(), 'bin', process.platform === 'win32' ? 'lake.exe' : 'lake');
 		const workDir = path.join(
 			os.tmpdir(),
 			'theoremdesk-mutants',

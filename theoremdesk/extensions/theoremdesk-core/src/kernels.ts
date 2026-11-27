@@ -94,12 +94,13 @@ export type VerifyMode =
 /** The process that runs a verification, or why it can't run on this platform. */
 export function verificationCommand(
 	platform: NodeJS.Platform,
-	home: string,
+	/** The elan home in use: TheoremDesk's own, or ~/.elan. */
+	elanHome: string,
 	leanDir: string,
 	wslVerifyScript: string,
 	mode: VerifyMode,
 ): { command: string; args: string[]; cwd?: string } | { unsupported: string } {
-	const lake = path.join(home, '.elan', 'bin', platform === 'win32' ? 'lake.exe' : 'lake');
+	const lake = path.join(elanHome, 'bin', platform === 'win32' ? 'lake.exe' : 'lake');
 	if (mode.kind === 'build') {
 		return { command: lake, args: ['build'], cwd: leanDir };
 	}

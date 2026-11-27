@@ -9,12 +9,23 @@ import { CheckResult, Env, Fix, Group, runChecks, Status, Step } from './checks'
 
 const RUN_TIMEOUT_MS = 20_000;
 
-/** wsl.exe prints its own messages in UTF-16 unless told otherwise. */
-const CHILD_ENV = { ...process.env, WSL_UTF8: '1' };
+/** The current environment (PATH may gain the bundled tools after startup), plus
+ * WSL_UTF8: wsl.exe prints its own messages in UTF-16 unless told otherwise. */
+const childEnv = () => ({ ...process.env, WSL_UTF8: '1' });
 
-function nodeEnv(workspace: string | undefined, wslSetupScript: string): Env {
+/** The built-in toolchain, once bootstrapped. */
+export interface BuiltIn {
+	python: string;
+	elanHome: string;
+	status: { id: string; label: string; ok: boolean; detail: string }[];
+}
+
+function nodeEnv(workspace: string | undefined, wslSetupScript: string, builtIn?: BuiltIn): Env {
 	return {
 		wslSetupScript,
+		bundledPython: builtIn?.python,
+		elanHome: builtIn?.elanHome,
+		bundledStatus: builtIn?.status,
 		platform: process.platform,
 		home: os.homedir(),
 		localAppData: process.env.LOCALAPPDATA,
@@ -22,7 +33,7 @@ function nodeEnv(workspace: string | undefined, wslSetupScript: string): Env {
 		workspace,
 		run: (command, args, cwd) =>
 			new Promise((resolve) => {
-				execFile(command, args, { cwd, timeout: RUN_TIMEOUT_MS, windowsHide: true, env: CHILD_ENV }, (error, stdout, stderr) => {
+				execFile(command, args, { cwd, timeout: RUN_TIMEOUT_MS, windowsHide: true, env: childEnv() }, (error, stdout, stderr) => {
 					resolve({ ok: !error, stdout: `${stdout}${stderr ? `\n${stderr}` : ''}` });
 				});
 			}),
@@ -61,6 +72,9 @@ export class EnvironmentView implements vscode.TreeDataProvider<Node>, vscode.Di
 	readonly onDidChangeTreeData = this.changed.event;
 	private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
+	/** Set once the built-in toolchain is bootstrapped. */
+	builtIn: BuiltIn | undefined;
+
 	constructor(private readonly wslSetupScript: string) {
 		this.statusBar.command = 'theoremdesk.checkEnvironment';
 		this.statusBar.name = 'TheoremDesk Environment';
@@ -81,7 +95,7 @@ export class EnvironmentView implements vscode.TreeDataProvider<Node>, vscode.Di
 	refresh(): Promise<CheckResult[]> {
 		if (!this.checking) {
 			const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-			this.checking = runChecks(nodeEnv(workspace, this.wslSetupScript))
+			this.checking = runChecks(nodeEnv(workspace, this.wslSetupScript, this.builtIn))
 				.then((results) => {
 					this.results = results;
 					this.updateStatusBar();
@@ -194,7 +208,7 @@ export function runInTerminal(step: Step): Promise<{ exitCode: number | undefine
 			open: () => {
 				const shown = [step.command, ...step.args].map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ');
 				writeEmitter.fire(`\x1b[1m> ${shown}\x1b[0m\r\n${step.cwd ? `  in ${step.cwd}\r\n` : ''}\r\n`);
-				child = spawn(step.command, step.args, { cwd: step.cwd, windowsHide: true, env: CHILD_ENV });
+				child = spawn(step.command, step.args, { cwd: step.cwd, windowsHide: true, env: childEnv() });
 				const forward = (data: Buffer) => {
 					const text = data.toString();
 					output += text;

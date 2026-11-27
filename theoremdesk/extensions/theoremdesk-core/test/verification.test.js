@@ -101,7 +101,7 @@ test('commands per platform and mode', () => {
 		['comparator', '.theoremdesk/comparator.json'],
 	);
 	assert.deepEqual(verificationCommand('win32', 'C:\\Users\\r', lean, script, { kind: 'build' }).args, ['build']);
-	assert.deepEqual(verificationCommand('linux', '/home/r', '/p/lean', script, { kind: 'check', paranoid: false }), {
+	assert.deepEqual(verificationCommand('linux', path.join('/home/r', '.elan'), '/p/lean', script, { kind: 'check', paranoid: false }), {
 		command: path.join('/home/r', '.elan', 'bin', 'lake'),
 		args: ['check'],
 		cwd: '/p/lean',

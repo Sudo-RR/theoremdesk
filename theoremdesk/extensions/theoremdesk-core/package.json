@@ -18,7 +18,7 @@
 	],
 	"main": "./out/extension.js",
 	"activationEvents": [
-		"onStartupFinished"
+		"*"
 	],
 	"scripts": {
 		"compile": "tsc -p ./",
@@ -87,6 +87,11 @@
 			{
 				"command": "theoremdesk.mutations.showDiff",
 				"title": "Compare Mutant with File",
+				"category": "TheoremDesk"
+			},
+			{
+				"command": "theoremdesk.repairToolchain",
+				"title": "Repair Built-in Toolchain",
 				"category": "TheoremDesk"
 			}
 		],

@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
 import { MutationView } from './mutation';
+import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
 import { VerificationView } from './verify';
 
 const WALKTHROUGH_ID = 'gettingStarted';
@@ -42,7 +43,40 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.workspace.onDidChangeWorkspaceFolders(() => environment.refresh()),
 	);
 
-	void environment.refresh().then(() => offerProjectSetup(environment));
+	// Make the built-in Lean, Python, LaTeX and Git ready (and prove they run)
+	// before anything else, so the checks and other extensions see them.
+	const log = vscode.window.createOutputChannel('TheoremDesk');
+	context.subscriptions.push(log);
+	let toolchain: Toolchain | undefined;
+	const useToolchain = (t: Toolchain | undefined) => {
+		toolchain = t;
+		environment.builtIn = t
+			? { python: t.tools.python, elanHome: t.result.elanHome, status: t.result.status }
+			: undefined;
+	};
+	context.subscriptions.push(
+		vscode.commands.registerCommand('theoremdesk.repairToolchain', async () => {
+			if (!toolchain) {
+				void vscode.window.showInformationMessage('This build of TheoremDesk has no built-in toolchain to repair.');
+				return;
+			}
+			const current = toolchain;
+			await vscode.window.withProgress(
+				{ location: vscode.ProgressLocation.Notification, title: 'Repairing the built-in toolchain' },
+				async () => useToolchain(await repairToolchain(context, current, log)),
+			);
+			await environment.refresh();
+			const failed = toolchain?.result.status.filter((s) => !s.ok) ?? [];
+			if (failed.length === 0) {
+				void vscode.window.showInformationMessage('The built-in Lean, Python, LaTeX and Git all work.');
+			}
+		}),
+	);
+	void provisionBundledTools(context, log)
+		.then(useToolchain)
+		.catch((error) => log.appendLine(`Setting up the built-in toolchain failed: ${(error as Error).stack ?? error}`))
+		.then(() => environment.refresh())
+		.then(() => offerProjectSetup(environment));
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {
 		void context.globalState.update(GETTING_STARTED_SHOWN, true);

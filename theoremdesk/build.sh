@@ -11,6 +11,7 @@
 #   -s  reuse the VS Code source already in ./vscode instead of fetching it again
 #   -n  don't bundle the extensions from theoremdesk/extensions.json
 #       (TheoremDesk's own extensions in theoremdesk/extensions/ are always built)
+#   -t  don't bundle Python, TeX and Lean (theoremdesk/tools/tools.json)
 #
 # This follows VSCodium's documented downstream build (export the variables,
 # then get_repo.sh and build.sh) rather than dev/build.sh, which hardcodes
@@ -22,12 +23,14 @@ cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
 SKIP_SOURCE="no"
 SKIP_EXTENSIONS="no"
+SKIP_TOOLS="no"
 
-while getopts ":sn" opt; do
+while getopts ":snt" opt; do
   case "${opt}" in
     s) SKIP_SOURCE="yes" ;;
     n) SKIP_EXTENSIONS="yes" ;;
-    *) echo "usage: bash theoremdesk/build.sh [-s] [-n]" >&2; exit 2 ;;
+    t) SKIP_TOOLS="yes" ;;
+    *) echo "usage: bash theoremdesk/build.sh [-s] [-n] [-t]" >&2; exit 2 ;;
   esac
 done
 
@@ -113,6 +116,18 @@ if [[ "${SKIP_EXTENSIONS}" == "no" ]]; then
 fi
 
 bash theoremdesk/build_local_extensions.sh "${EXTENSIONS_DIR}"
+
+if [[ "${SKIP_TOOLS}" == "no" ]]; then
+  RESOURCES_DIR="$( dirname "$( dirname "${EXTENSIONS_DIR}" )" )"
+  bash theoremdesk/bundle_tools.sh "${RESOURCES_DIR}" "${PLATFORM}-${VSCODE_ARCH}"
+
+  # A build whose built-in toolchain doesn't work offline, from a clean
+  # first launch, must never ship.
+  if ! bash theoremdesk/test_offline.sh "${RESOURCES_DIR}"; then
+    echo "TheoremDesk: BUILD FAILED. The built-in toolchain didn't pass the offline test above." >&2
+    exit 1
+  fi
+fi
 
 { set +x; } 2> /dev/null
 echo "TheoremDesk: build finished in ./${APP_DIR}"
