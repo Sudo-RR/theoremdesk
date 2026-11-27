@@ -38,6 +38,7 @@ test('generates the Hamiltonian project with every placeholder filled', () => {
 		'lean/Hamiltonian.lean',
 		'lean/Hamiltonian/Oscillator.lean',
 		'lean/Hamiltonian/Pendulum.lean',
+		'lean/Attempts/README.md',
 		'notebooks/01_oscillator.ipynb',
 		'notebooks/02_pendulum.ipynb',
 		'manuscript/main.tex',

@@ -256,3 +256,17 @@ test('old Lean versions are flagged for kernel checks', async () => {
 	assert.equal(results.kernelChecks.status, 'warning');
 	assert.match(results.kernelChecks.detail, /v4\.35\.0/);
 });
+
+test('build check only waits for default-target libraries', async () => {
+	const { defaultLibraries } = require('../out/checks');
+	const withAttempts = LAKEFILE.replace('name = "Hamiltonian"\n\n[[require]]', 'name = "Hamiltonian"\ndefaultTargets = ["Hamiltonian"]\n\n[[require]]') +
+		'\n[[lean_lib]]\nname = "Attempts"\nglobs = ["Attempts.+"]\n';
+	assert.deepEqual(defaultLibraries(withAttempts), ['Hamiltonian']);
+	assert.deepEqual(defaultLibraries(LAKEFILE + '\n[[lean_lib]]\nname = "Extra"\n'), ['Hamiltonian', 'Extra']);
+
+	const template = require('node:fs').readFileSync(
+		path.join(__dirname, '..', 'templates', 'hamiltonian', 'lean', 'lakefile.toml'),
+		'utf8',
+	);
+	assert.deepEqual(defaultLibraries(template), ['Hamiltonian']);
+});

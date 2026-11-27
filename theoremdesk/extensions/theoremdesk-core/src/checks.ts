@@ -344,6 +344,20 @@ export function findLeanProject(env: Env, workspace: string): string | undefined
 	return undefined;
 }
 
+/**
+ * The libraries `lake build` builds: the `defaultTargets` that are libraries,
+ * or every library if `defaultTargets` isn't set.
+ */
+export function defaultLibraries(lakefile: string): string[] {
+	const libraries = leanLibraries(lakefile);
+	const targets = /^\s*defaultTargets\s*=\s*\[([^\]]*)\]/m.exec(lakefile);
+	if (!targets) {
+		return libraries;
+	}
+	const defaults = [...targets[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+	return libraries.filter((lib) => defaults.includes(lib));
+}
+
 /** `[[lean_lib]]` names from a lakefile.toml. */
 export function leanLibraries(lakefile: string): string[] {
 	const names: string[] = [];
@@ -423,7 +437,7 @@ async function checkLeanProject(env: Env, leanDir: string, elan: Tool | undefine
 		}
 	}
 
-	const libraries = leanLibraries(lakefile);
+	const libraries = defaultLibraries(lakefile);
 	if (libraries.length > 0) {
 		const base = { id: 'leanBuild', group: 'project' as const, label: 'Lean project built' };
 		const built = libraries.every((lib) => env.exists(path.join(leanDir, '.lake', 'build', 'lib', 'lean', `${lib}.olean`)));

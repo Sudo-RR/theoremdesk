@@ -112,7 +112,11 @@ export class VerificationView implements vscode.TreeDataProvider<Item> {
 			'**/.lake/**',
 		)).map((uri) => uri.fsPath);
 
+		// Proof attempts live in Attempts/ (a library outside the default build).
+		const isAttempt = (file: string) => moduleName(leanDir, file).startsWith('Attempts.');
+
 		const challenges = leanFiles
+			.filter((file) => !isAttempt(file))
 			.map((file) => ({ file, theorems: sorryTheorems(fs.readFileSync(file, 'utf8')) }))
 			.filter((c) => c.theorems.length > 0);
 		if (challenges.length === 0) {
@@ -144,8 +148,16 @@ export class VerificationView implements vscode.TreeDataProvider<Item> {
 		const solutionPick = await vscode.window.showQuickPick(
 			leanFiles
 				.filter((file) => file !== challenge.file)
-				.map((file) => ({ label: moduleName(leanDir, file), file })),
-			{ title: 'Check Proof Against Statement (3/3)', placeHolder: 'File with the proof (for example, the agent\'s)' },
+				.map((file) => ({
+					label: moduleName(leanDir, file),
+					description: isAttempt(file) ? 'proof attempt' : undefined,
+					file,
+				}))
+				.sort((a, b) => Number(isAttempt(b.file)) - Number(isAttempt(a.file))),
+			{
+				title: 'Check Proof Against Statement (3/3)',
+				placeHolder: 'File with the proof, usually in Attempts/ (for example, the agent\'s)',
+			},
 		);
 		if (!solutionPick) {
 			return;

@@ -10,3 +10,12 @@ rev = "{{PHYSLIB_REV}}"
 
 [[lean_lib]]
 name = "Hamiltonian"
+
+# Proof attempts, yours or the research agent's, one file per attempt
+# (Attempts/Pendulum.lean, ...). They aren't part of the default build, so an
+# unfinished or untrusted attempt never affects `lake build` or `lake check`.
+# Check Proof Against Statement judges them against the statements in
+# Hamiltonian/.
+[[lean_lib]]
+name = "Attempts"
+globs = ["Attempts.+"]

@@ -28,6 +28,8 @@ lake build           # also compiles the Physlib files this project uses
 
 Open `lean/Hamiltonian/Pendulum.lean`. `energy_conserved` ends in `sorry`: it is stated but not yet proved.
 
+To prove it, write the proof in `lean/Attempts/` (see the README there), then run **Check Proof Against Statement** from the Run button. It confirms the attempt proves exactly the stated theorem, adds no axioms, and is accepted by all six of Lean's kernels. `Attempts/` isn't part of the default build, so unfinished or untrusted attempts never affect `lake build` or `lake check`.
+
 On Windows, keep the project in a short folder such as `Documents\hamiltonian-mechanics`, or turn on long paths (the Environment view offers this). Some Mathlib build files have very long names.
 
 ### 3. Manuscript
