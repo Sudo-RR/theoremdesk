@@ -1,0 +1,26 @@
+info: Tiny: no previous manifest, creating one from scratch
+info: toolchain not updated; already up-to-date
+Resolving dependencies
+✔ [2/6] Built Tiny.Basic (314ms)
+✔ [4/6] Built Tiny (200ms)
+Building and exporting
+Running Lean paranoid kernel on solution
+Lean paranoid kernel accepts the solution
+Running lean4lean kernel on solution
+[anonymous]:thmDecl _private.Init.Data.String.Lemmas.Lossy.0.String.fromUTF8Lossy_surrogate_append._proof_1_10: lean4lean took 1217
+checked 58546 declarations
+lean4lean kernel accepts the solution
+Running nanoda kernel on solution
+Skipped exported but unpermitted axioms ["sorryAx"]
+nanoda kernel accepts the solution
+Running con-leche kernel on solution
+con-leche: 1 inductive blocks modelled in-process: Lean.Syntax (30 generated records, checked by the fold as declarations and not counted as records of the file)
+con-leche: accepted 58544 declarations (--verified)
+con-leche kernel accepts the solution
+Running con-ron kernel on solution
+con-ron: 1 inductive blocks modelled in-process: Lean.Syntax (30 generated records, checked by the fold as declarations and not counted as records of the file)
+con-ron: accepted 58544 declarations (--verified)
+con-ron kernel accepts the solution
+Running Lean default kernel on solution
+Lean default kernel accepts the solution
+Uses axioms: Classical.choice, propext, Quot.sound

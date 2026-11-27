@@ -1,0 +1,13 @@
+info: Tiny: no previous manifest, creating one from scratch
+info: toolchain not updated; already up-to-date
+Resolving dependencies
+Building Puzzle.Challenge
+⚠ [2/3] Replayed Puzzle.Challenge
+warning: Puzzle/Challenge.lean:2:8: declaration uses `sorry`
+Build completed successfully (3 jobs).
+Exporting #[Quot, Quot.mk, Quot.lift, Quot.ind, double_eq, propext, Quot.sound, Classical.choice, Nat.add, Nat.sub, Nat.mul, Nat.pow, Nat.gcd, Nat.div, Nat.mod, Nat.beq, Nat.ble, Nat.land, Nat.lor, Nat.xor, Nat.shiftLeft, Nat.shiftRight, String.ofList, Char.ofNat, List, eagerReduce, Nat, String, Str
+Building Puzzle.Axiom
+✔ [2/3] Built Puzzle.Axiom (353ms)
+Build completed successfully (3 jobs).
+error: Illegal axiom detected: 'cheat'
+Exporting #[Quot, Quot.mk, Quot.lift, Quot.ind, double_eq, propext, Quot.sound, Classical.choice, Nat.add, Nat.sub, Nat.mul, Nat.pow, Nat.gcd, Nat.div, Nat.mod, Nat.beq, Nat.ble, Nat.land, Nat.lor, Nat.xor, Nat.shiftLeft, Nat.shiftRight, String.ofList, Char.ofNat, List, eagerReduce, Nat, String, Str

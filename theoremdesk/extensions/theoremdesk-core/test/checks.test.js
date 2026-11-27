@@ -42,6 +42,7 @@ const ALL_TOOLS = {
 	elan: 'elan 4.1.2',
 	pdflatex: 'pdfTeX 3.141592653',
 	bibtex: 'BibTeX 0.99d',
+	bwrap: 'bubblewrap 0.9.0',
 };
 
 const byId = (results) => Object.fromEntries(results.map((r) => [r.id, r]));
@@ -152,7 +153,8 @@ test('fresh project: venv, Mathlib and build all need doing, in order', async ()
 		}),
 	);
 	const project = results.filter((r) => r.group === 'project');
-	assert.deepEqual(project.map((r) => r.id), ['venv', 'leanToolchain', 'mathlibCache', 'leanBuild']);
+	assert.deepEqual(project.map((r) => r.id), ['venv', 'leanToolchain', 'kernelChecks', 'mathlibCache', 'leanBuild']);
+	assert.equal(byId(project).kernelChecks.status, 'ok');
 	const ids = byId(project);
 
 	assert.equal(ids.venv.status, 'missing');
@@ -216,4 +218,41 @@ test('helpers', () => {
 		'scikit_learn',
 	]);
 	assert.deepEqual(leanLibraries(LAKEFILE + '\n[[lean_lib]]\nname = "Extra"\n'), ['Hamiltonian', 'Extra']);
+});
+
+test('kernel checks sandbox: Linux needs bwrap, Windows needs WSL set up, macOS has no row', async () => {
+	const linux = byId(await runChecks(fakeEnv({ programs: { ...ALL_TOOLS, bwrap: false } })));
+	assert.equal(linux.kernelSandbox.status, 'missing');
+	assert.deepEqual(linux.kernelSandbox.fix.steps[0].args, ['apt-get', 'install', '-y', 'bubblewrap']);
+	const linuxOk = byId(await runChecks(fakeEnv({ programs: ALL_TOOLS })));
+	assert.equal(linuxOk.kernelSandbox.status, 'ok');
+
+	const noWsl = byId(await runChecks(fakeEnv({ platform: 'win32', programs: { git: 'git version 2' } })));
+	assert.deepEqual(noWsl.kernelSandbox.fix.steps[0].args, ['--install', '-d', 'Ubuntu-24.04']);
+
+	const script = 'C:/TD/resources/app/extensions/theoremdesk.theoremdesk-core/scripts/wsl-setup.sh';
+	const env = fakeEnv({ platform: 'win32', programs: { 'wsl.exe --status': 'Default Version: 2' } });
+	env.wslSetupScript = script;
+	const notSetUp = byId(await runChecks(env));
+	assert.equal(notSetUp.kernelSandbox.status, 'missing');
+	assert.deepEqual(notSetUp.kernelSandbox.fix.steps[0].args, [
+		'-e',
+		'bash',
+		'/mnt/c/TD/resources/app/extensions/theoremdesk.theoremdesk-core/scripts/wsl-setup.sh',
+	]);
+
+	const ready = byId(
+		await runChecks(fakeEnv({ platform: 'win32', programs: { 'wsl.exe --status': 'ok', 'wsl.exe -e': '' } })),
+	);
+	assert.equal(ready.kernelSandbox.status, 'ok');
+
+	const mac = byId(await runChecks(fakeEnv({ platform: 'darwin', programs: ALL_TOOLS })));
+	assert.equal(mac.kernelSandbox, undefined);
+});
+
+test('old Lean versions are flagged for kernel checks', async () => {
+	const files = projectFiles({ [path.join(WS, 'lean', 'lean-toolchain')]: 'leanprover/lean4:v4.30.0\n' });
+	const results = byId(await runChecks(fakeEnv({ programs: ALL_TOOLS, files, workspace: WS })));
+	assert.equal(results.kernelChecks.status, 'warning');
+	assert.match(results.kernelChecks.detail, /v4\.35\.0/);
 });

@@ -52,6 +52,30 @@
 				"title": "Fix",
 				"category": "TheoremDesk",
 				"icon": "$(wrench)"
+			},
+			{
+				"command": "theoremdesk.leanBuild",
+				"title": "Build Lean Project",
+				"category": "TheoremDesk",
+				"icon": "$(play)"
+			},
+			{
+				"command": "theoremdesk.checkLeanKernel",
+				"title": "Check with Lean Kernel (sandboxed)",
+				"category": "TheoremDesk",
+				"icon": "$(shield)"
+			},
+			{
+				"command": "theoremdesk.verifyKernels",
+				"title": "Verify with All Kernels (paranoid, slow)",
+				"category": "TheoremDesk",
+				"icon": "$(verified)"
+			},
+			{
+				"command": "theoremdesk.checkProof",
+				"title": "Check Proof Against Statement...",
+				"category": "TheoremDesk",
+				"icon": "$(git-compare)"
 			}
 		],
 		"viewsContainers": {
@@ -68,6 +92,10 @@
 				{
 					"id": "theoremdesk.environment",
 					"name": "Environment"
+				},
+				{
+					"id": "theoremdesk.verification",
+					"name": "Verification"
 				}
 			]
 		},
@@ -75,6 +103,10 @@
 			{
 				"view": "theoremdesk.environment",
 				"contents": "Checking Python, Lean and TeX..."
+			},
+			{
+				"view": "theoremdesk.verification",
+				"contents": "Check your Lean project with Lean's kernel, or with Lean's kernel and five independent checkers. A proof that exploits a bug in one kernel is caught by the others. Both run sandboxed and allow only the standard axioms.\n[Check with Lean Kernel](command:theoremdesk.checkLeanKernel)\n[Verify with All Kernels](command:theoremdesk.verifyKernels)\nCheck that a proof, such as one the research agent wrote, proves exactly the statement you wrote:\n[Check Proof Against Statement](command:theoremdesk.checkProof)\nThe Run button on Lean files offers all of these."
 			}
 		],
 		"menus": {
@@ -89,6 +121,21 @@
 					"command": "theoremdesk.environment.refresh",
 					"when": "view == theoremdesk.environment",
 					"group": "navigation"
+				},
+				{
+					"command": "theoremdesk.checkLeanKernel",
+					"when": "view == theoremdesk.verification",
+					"group": "navigation@1"
+				},
+				{
+					"command": "theoremdesk.verifyKernels",
+					"when": "view == theoremdesk.verification",
+					"group": "navigation@2"
+				},
+				{
+					"command": "theoremdesk.checkProof",
+					"when": "view == theoremdesk.verification",
+					"group": "navigation@3"
 				}
 			],
 			"view/item/context": [
@@ -102,6 +149,28 @@
 				{
 					"command": "theoremdesk.environment.fix",
 					"when": "false"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "theoremdesk.leanBuild",
+					"when": "resourceLangId == lean4",
+					"group": "navigation@1"
+				},
+				{
+					"command": "theoremdesk.checkLeanKernel",
+					"when": "resourceLangId == lean4",
+					"group": "navigation@2"
+				},
+				{
+					"command": "theoremdesk.verifyKernels",
+					"when": "resourceLangId == lean4",
+					"group": "navigation@3"
+				},
+				{
+					"command": "theoremdesk.checkProof",
+					"when": "resourceLangId == lean4",
+					"group": "navigation@4"
 				}
 			]
 		},

@@ -9,8 +9,12 @@ import { CheckResult, Env, Fix, Group, runChecks, Status, Step } from './checks'
 
 const RUN_TIMEOUT_MS = 20_000;
 
-function nodeEnv(workspace: string | undefined): Env {
+/** wsl.exe prints its own messages in UTF-16 unless told otherwise. */
+const CHILD_ENV = { ...process.env, WSL_UTF8: '1' };
+
+function nodeEnv(workspace: string | undefined, wslSetupScript: string): Env {
 	return {
+		wslSetupScript,
 		platform: process.platform,
 		home: os.homedir(),
 		localAppData: process.env.LOCALAPPDATA,
@@ -18,7 +22,7 @@ function nodeEnv(workspace: string | undefined): Env {
 		workspace,
 		run: (command, args, cwd) =>
 			new Promise((resolve) => {
-				execFile(command, args, { cwd, timeout: RUN_TIMEOUT_MS, windowsHide: true }, (error, stdout, stderr) => {
+				execFile(command, args, { cwd, timeout: RUN_TIMEOUT_MS, windowsHide: true, env: CHILD_ENV }, (error, stdout, stderr) => {
 					resolve({ ok: !error, stdout: `${stdout}${stderr ? `\n${stderr}` : ''}` });
 				});
 			}),
@@ -57,7 +61,7 @@ export class EnvironmentView implements vscode.TreeDataProvider<Node>, vscode.Di
 	readonly onDidChangeTreeData = this.changed.event;
 	private readonly statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 
-	constructor() {
+	constructor(private readonly wslSetupScript: string) {
 		this.statusBar.command = 'theoremdesk.checkEnvironment';
 		this.statusBar.name = 'TheoremDesk Environment';
 		this.statusBar.text = '$(sync~spin) TheoremDesk';
@@ -77,7 +81,7 @@ export class EnvironmentView implements vscode.TreeDataProvider<Node>, vscode.Di
 	refresh(): Promise<CheckResult[]> {
 		if (!this.checking) {
 			const workspace = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-			this.checking = runChecks(nodeEnv(workspace))
+			this.checking = runChecks(nodeEnv(workspace, this.wslSetupScript))
 				.then((results) => {
 					this.results = results;
 					this.updateStatusBar();
@@ -168,12 +172,18 @@ async function applyFix(fix: Fix): Promise<void> {
 	}
 }
 
+async function runStep(step: Step): Promise<number | undefined> {
+	return (await runInTerminal(step)).exitCode;
+}
+
 /**
  * Run one step in its own terminal so the user sees exactly what runs.
- * Resolves with the exit code once the process ends.
+ * Resolves with the exit code and everything it printed once it ends.
  */
-function runStep(step: Step): Promise<number | undefined> {
-	return new Promise((resolve) => {
+export function runInTerminal(step: Step): Promise<{ exitCode: number | undefined; output: string }> {
+	let output = '';
+	return new Promise((resolveRun) => {
+		const resolve = (exitCode: number | undefined) => resolveRun({ exitCode, output });
 		const writeEmitter = new vscode.EventEmitter<string>();
 		const closeEmitter = new vscode.EventEmitter<number>();
 		let child: ChildProcess | undefined;
@@ -184,8 +194,12 @@ function runStep(step: Step): Promise<number | undefined> {
 			open: () => {
 				const shown = [step.command, ...step.args].map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ');
 				writeEmitter.fire(`\x1b[1m> ${shown}\x1b[0m\r\n${step.cwd ? `  in ${step.cwd}\r\n` : ''}\r\n`);
-				child = spawn(step.command, step.args, { cwd: step.cwd, windowsHide: true });
-				const forward = (data: Buffer) => writeEmitter.fire(data.toString().replace(/\r?\n/g, '\r\n'));
+				child = spawn(step.command, step.args, { cwd: step.cwd, windowsHide: true, env: CHILD_ENV });
+				const forward = (data: Buffer) => {
+					const text = data.toString();
+					output += text;
+					writeEmitter.fire(text.replace(/\r?\n/g, '\r\n'));
+				};
 				child.stdout?.on('data', forward);
 				child.stderr?.on('data', forward);
 				child.on('error', (error) => {

@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
+import { VerificationView } from './verify';
 
 const WALKTHROUGH_ID = 'gettingStarted';
 const GETTING_STARTED_SHOWN = 'theoremdesk.gettingStartedShown';
@@ -11,11 +12,17 @@ const PENDING_README = 'theoremdesk.pendingReadme';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const templatesDir = context.asAbsolutePath('templates');
-	const environment = new EnvironmentView();
+	const environment = new EnvironmentView(context.asAbsolutePath(path.join('scripts', 'wsl-setup.sh')));
+	const verification = new VerificationView(context.asAbsolutePath(path.join('scripts', 'wsl-verify.sh')));
 
 	context.subscriptions.push(
 		environment,
 		vscode.window.registerTreeDataProvider('theoremdesk.environment', environment),
+		vscode.window.registerTreeDataProvider('theoremdesk.verification', verification),
+		vscode.commands.registerCommand('theoremdesk.leanBuild', () => verification.buildProject()),
+		vscode.commands.registerCommand('theoremdesk.checkLeanKernel', () => verification.checkWithLeanKernel()),
+		vscode.commands.registerCommand('theoremdesk.verifyKernels', () => verification.verifyProject()),
+		vscode.commands.registerCommand('theoremdesk.checkProof', () => verification.checkProof()),
 		vscode.commands.registerCommand('theoremdesk.newResearchProject', () =>
 			newResearchProject(context, templatesDir),
 		),

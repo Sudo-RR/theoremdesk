@@ -3,6 +3,7 @@
 // everything platform-specific goes through the `Env` passed in.
 
 import * as path from 'path';
+import { MIN_LEAN_FOR_KERNEL_CHECKS, supportsKernelChecks, toWslPath } from './kernels';
 
 export type Status = 'ok' | 'warning' | 'missing';
 export type Group = 'tools' | 'project';
@@ -48,6 +49,8 @@ export interface Env {
 	listDir(dir: string): string[];
 	/** The open project folder, if any. */
 	workspace?: string;
+	/** Windows path of scripts/wsl-setup.sh, for the WSL kernel-check setup fix. */
+	wslSetupScript?: string;
 }
 
 /** A tool found on PATH, or installed somewhere this window's PATH doesn't reach yet. */
@@ -263,6 +266,71 @@ async function checkLongPaths(env: Env, git: boolean): Promise<CheckResult | und
 	};
 }
 
+/**
+ * `lake check` and `lake comparator` build the project inside a bwrap
+ * sandbox, which only exists on Linux. On Windows they run inside WSL.
+ */
+async function checkKernelSandbox(env: Env): Promise<CheckResult | undefined> {
+	const base = { id: 'kernelSandbox', group: 'tools' as const, label: 'Kernel checks sandbox' };
+
+	if (env.platform === 'linux') {
+		const bwrap = await findTool(env, [{ command: 'bwrap' }], []);
+		return bwrap
+			? { ...base, status: 'ok', detail: `bwrap ${bwrap.version}` }
+			: {
+					...base,
+					status: 'missing',
+					detail: 'Verifying with all kernels needs bubblewrap (bwrap) to sandbox the build.',
+					fix: {
+						kind: 'steps',
+						label: 'Install bubblewrap',
+						steps: [{ label: 'Install bubblewrap', command: 'pkexec', args: ['apt-get', 'install', '-y', 'bubblewrap'] }],
+					},
+				};
+	}
+
+	if (env.platform !== 'win32') {
+		// No sandbox is available on macOS; the Verify command explains.
+		return undefined;
+	}
+
+	const wsl = await env.run('wsl.exe', ['--status']);
+	if (!wsl.ok) {
+		return {
+			...base,
+			status: 'missing',
+			detail: "Verifying with all kernels runs Lean's sandboxed checker inside WSL2. Installing WSL needs a Windows restart.",
+			fix: {
+				kind: 'steps',
+				label: 'Install WSL',
+				steps: [{ label: 'Install WSL with Ubuntu', command: 'wsl.exe', args: ['--install', '-d', 'Ubuntu-24.04'] }],
+			},
+		};
+	}
+
+	const ready = await env.run('wsl.exe', [
+		'-e',
+		'sh',
+		'-c',
+		'test -x "$HOME/.theoremdesk/tools/bwrap" && test -x "$HOME/.elan/bin/elan"',
+	]);
+	if (ready.ok) {
+		return { ...base, status: 'ok', detail: 'WSL has Lean (elan) and bwrap.' };
+	}
+	return {
+		...base,
+		status: 'missing',
+		detail: "Set up Lean (elan) and the bwrap sandbox in WSL's default distro. No administrator rights needed.",
+		fix: env.wslSetupScript
+			? {
+					kind: 'steps',
+					label: 'Set up kernel checks',
+					steps: [{ label: 'Set up kernel checks in WSL', command: 'wsl.exe', args: ['-e', 'bash', toWslPath(env.wslSetupScript)] }],
+				}
+			: undefined,
+	};
+}
+
 // ---------------------------------------------------------------------------
 // The open project
 
@@ -316,6 +384,21 @@ async function checkLeanProject(env: Env, leanDir: string, elan: Tool | undefine
 						},
 			);
 		}
+	}
+
+	if (toolchain) {
+		const min = MIN_LEAN_FOR_KERNEL_CHECKS.join('.');
+		results.push(
+			supportsKernelChecks(toolchain)
+				? { id: 'kernelChecks', group: 'project', label: 'Multi-kernel checks', status: 'ok', detail: `Available (Lean v${min} or later).` }
+				: {
+						id: 'kernelChecks',
+						group: 'project',
+						label: 'Multi-kernel checks',
+						status: 'warning',
+						detail: `Need Lean v${min} or later; this project pins ${toolchain}. Upgrade lean-toolchain and its libraries to use them.`,
+					},
+		);
 	}
 
 	const lakefile = env.readFile(path.join(leanDir, 'lakefile.toml')) ?? env.readFile(path.join(leanDir, 'lakefile.lean')) ?? '';
@@ -442,6 +525,7 @@ export async function runChecks(env: Env): Promise<CheckResult[]> {
 		Promise.resolve(checkElan(elan)),
 		checkTex(env),
 		checkLongPaths(env, Boolean(git)),
+		checkKernelSandbox(env),
 	]);
 
 	const project: CheckResult[] = [];
