@@ -35,6 +35,46 @@
 				"command": "theoremdesk.openGettingStarted",
 				"title": "Get Started",
 				"category": "TheoremDesk"
+			},
+			{
+				"command": "theoremdesk.checkEnvironment",
+				"title": "Check Environment",
+				"category": "TheoremDesk"
+			},
+			{
+				"command": "theoremdesk.environment.refresh",
+				"title": "Check Again",
+				"category": "TheoremDesk",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "theoremdesk.environment.fix",
+				"title": "Fix",
+				"category": "TheoremDesk",
+				"icon": "$(wrench)"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "theoremdesk",
+					"title": "TheoremDesk",
+					"icon": "media/theoremdesk.svg"
+				}
+			]
+		},
+		"views": {
+			"theoremdesk": [
+				{
+					"id": "theoremdesk.environment",
+					"name": "Environment"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "theoremdesk.environment",
+				"contents": "Checking Python, Lean and TeX..."
 			}
 		],
 		"menus": {
@@ -42,6 +82,26 @@
 				{
 					"command": "theoremdesk.newResearchProject",
 					"group": "file"
+				}
+			],
+			"view/title": [
+				{
+					"command": "theoremdesk.environment.refresh",
+					"when": "view == theoremdesk.environment",
+					"group": "navigation"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "theoremdesk.environment.fix",
+					"when": "view == theoremdesk.environment && viewItem == fixable",
+					"group": "inline"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "theoremdesk.environment.fix",
+					"when": "false"
 				}
 			]
 		},
@@ -63,6 +123,17 @@
 						},
 						"completionEvents": [
 							"onCommand:theoremdesk.newResearchProject"
+						]
+					},
+					{
+						"id": "environment",
+						"title": "Check your environment",
+						"description": "TheoremDesk checks Git, Python, Lean, Mathlib and TeX for you, and installs or fixes what's missing with one click.\n[Check Environment](command:theoremdesk.checkEnvironment)",
+						"media": {
+							"markdown": "media/walkthrough/environment.md"
+						},
+						"completionEvents": [
+							"onCommand:theoremdesk.checkEnvironment"
 						]
 					},
 					{

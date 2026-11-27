@@ -8,25 +8,31 @@ A TheoremDesk research project: the simple harmonic oscillator and the nonlinear
 | `lean/` | A Lean 4 project on Physlib (`{{PHYSLIB_REV}}`) and Mathlib. |
 | `manuscript/` | The paper. It includes whatever the notebooks last generated. |
 
-## 1. Python
+## Setting up
+
+Open the **⊢ TheoremDesk** view in the activity bar. Its **Environment** list shows what this project still needs (the Python environment, the Lean version, prebuilt Mathlib, TeX) and fixes each with a click. Or do it by hand:
+
+### 1. Python
 
 Run **Python: Create Environment** from the Command Palette, choose **Venv**, and tick `requirements.txt`. Then open `notebooks/01_oscillator.ipynb`, pick the `.venv` kernel, and **Run All**. Do the same for `02_pendulum.ipynb`.
 
-## 2. Lean
+### 2. Lean
 
 You need elan (the walkthrough's **Install Lean** button installs it). In a terminal:
 
 ```bash
 cd lean
 lake exe cache get   # prebuilt Mathlib, several GB the first time
-lake build
+lake build           # also compiles the Physlib files this project uses
 ```
 
 Open `lean/Hamiltonian/Pendulum.lean`. `energy_conserved` ends in `sorry`: it is stated but not yet proved.
 
-## 3. Manuscript
+On Windows, keep the project in a short folder such as `Documents\hamiltonian-mechanics`, or turn on long paths (the Environment view offers this). Some Mathlib build files have very long names.
 
-Install a TeX distribution (MiKTeX or TeX Live), open `manuscript/main.tex`, and run **LaTeX Workshop: Build LaTeX project**. The PDF is written to `manuscript/build/`.
+### 3. Manuscript
+
+Install a TeX distribution (MiKTeX or TeX Live), open `manuscript/main.tex`, and run **LaTeX Workshop: Build LaTeX project**. The project uses the `pdflatex -> bibtex -> pdflatex * 2` recipe, so it doesn't need Perl or `latexmk`. The PDF is written next to `main.tex`.
 
 ## Evidence
 

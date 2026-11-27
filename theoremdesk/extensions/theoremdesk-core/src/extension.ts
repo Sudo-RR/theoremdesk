@@ -1,6 +1,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { EnvironmentView } from './environment';
 import { generateProject, isValidProjectName, listTemplates } from './generator';
 
 const WALKTHROUGH_ID = 'gettingStarted';
@@ -10,13 +11,25 @@ const PENDING_README = 'theoremdesk.pendingReadme';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const templatesDir = context.asAbsolutePath('templates');
+	const environment = new EnvironmentView();
 
 	context.subscriptions.push(
+		environment,
+		vscode.window.registerTreeDataProvider('theoremdesk.environment', environment),
 		vscode.commands.registerCommand('theoremdesk.newResearchProject', () =>
 			newResearchProject(context, templatesDir),
 		),
 		vscode.commands.registerCommand('theoremdesk.openGettingStarted', () => openGettingStarted(context)),
+		vscode.commands.registerCommand('theoremdesk.checkEnvironment', async () => {
+			await vscode.commands.executeCommand('theoremdesk.environment.focus');
+			await environment.refresh();
+		}),
+		vscode.commands.registerCommand('theoremdesk.environment.refresh', () => environment.refresh()),
+		vscode.commands.registerCommand('theoremdesk.environment.fix', (node) => environment.fix(node)),
+		vscode.workspace.onDidChangeWorkspaceFolders(() => environment.refresh()),
 	);
+
+	void environment.refresh().then(() => offerProjectSetup(environment));
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {
 		void context.globalState.update(GETTING_STARTED_SHOWN, true);
@@ -86,6 +99,23 @@ async function newResearchProject(context: vscode.ExtensionContext, templatesDir
 	if (choice) {
 		await context.globalState.update(PENDING_README, target);
 		await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(target), choice === openNew);
+	}
+}
+
+/** When a project opens with something to set up, say so once. */
+async function offerProjectSetup(environment: EnvironmentView): Promise<void> {
+	const projectIssues = environment.issues.filter((r) => r.group === 'project');
+	if (projectIssues.length === 0) {
+		return;
+	}
+	const show = 'Show';
+	const plural = projectIssues.length === 1 ? 'thing' : 'things';
+	const choice = await vscode.window.showInformationMessage(
+		`This project has ${projectIssues.length} ${plural} to set up: ${projectIssues.map((r) => r.label).join(', ')}.`,
+		show,
+	);
+	if (choice === show) {
+		await vscode.commands.executeCommand('theoremdesk.environment.focus');
 	}
 }
 

@@ -4,6 +4,7 @@ Built into TheoremDesk. It adds:
 
 - **TheoremDesk: New Research Project...** (also under File → New File...), which creates a project from a template in `templates/`.
 - The **Get started with TheoremDesk** walkthrough, opened on first launch.
+- The **Environment** view (⊢ icon in the activity bar) and status bar item. They check Git, Python, Lean (elan), TeX and Windows long-path support, plus the open project's `.venv`, Lean version, prebuilt Mathlib and Lean build. Each problem has a one-click fix that runs in its own terminal. The checks live in `src/checks.ts` and don't use the VS Code API, so they're tested against a fake machine.
 - Research defaults: basedpyright as the Python language server (`python.languageServer: None`).
 
 ## Developing

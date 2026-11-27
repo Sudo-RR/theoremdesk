@@ -3,9 +3,9 @@
 		"**/.lake/**": true
 	},
 	"search.exclude": {
-		"**/.lake": true,
-		"manuscript/build": true
+		"**/.lake": true
 	},
-	"latex-workshop.latex.outDir": "%DIR%/build",
+	"latex-workshop.latex.recipe.default": "pdflatex -> bibtex -> pdflatex * 2",
+	"latex-workshop.latex.autoClean.run": "onSucceeded",
 	"jupyter.notebookFileRoot": "${workspaceFolder}"
 }
