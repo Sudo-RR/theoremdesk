@@ -7,7 +7,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { chooseChatModel, downloadModel, findLocalAi, LlamaServer, LocalAi, ModelDownload, OpenAiClient, ServerKind, SMALL_MACHINE_GB } from './llm';
+import { chooseChatModel, downloadModel, findLocalAi, LlamaServer, LocalAi, ModelDownload, ModelFile, OpenAiClient, ServerKind, SMALL_MACHINE_GB } from './llm';
 import { dataDirectory } from './tools';
 
 const SMALL_MODEL_OFFERED = 'theoremdesk.ai.smallModelOffered';
@@ -65,7 +65,10 @@ export class LocalAiService implements vscode.Disposable {
 			throw new Error("This build of TheoremDesk doesn't include the local AI.");
 		}
 		const ai = this.ai;
-		const model = kind === 'chat' ? chooseChatModel(ai, os.totalmem() / 2 ** 30, this.config().get<string>('localModel') || undefined) : ai.embedding;
+		let model = kind === 'chat' ? chooseChatModel(ai, os.totalmem() / 2 ** 30, this.config().get<string>('localModel') || undefined) : ai.embedding;
+		if (!model.present && model.download) {
+			model = await this.installBundled(model);
+		}
 		const start: Promise<LlamaServer> = Promise.resolve(vscode.window
 			.withProgress(
 				{ location: vscode.ProgressLocation.Window, title: `Loading ${shortName(model.name)}` },
@@ -92,6 +95,60 @@ export class LocalAiService implements vscode.Disposable {
 		this.starting.set(kind, start);
 		this.update();
 		return start;
+	}
+
+	/**
+	 * A bundled model that isn't installed yet (the Windows installer installs
+	 * the models separately, and the user may have skipped them, or been
+	 * offline): download it into the data folder, once, with the user's OK.
+	 */
+	private installing: Promise<ModelFile> | undefined;
+	private async installBundled(model: ModelFile): Promise<ModelFile> {
+		if (this.installing) {
+			return this.installing;
+		}
+		const ai = this.ai!;
+		const missing = [ai.chat, ai.embedding].filter((m) => !m.present && m.download);
+		const total = missing.reduce((s, m) => s + m.download!.size, 0);
+		const download = `Download (${(total / 1e9).toFixed(1)} GB)`;
+		const choice = await vscode.window.showInformationMessage(
+			`TheoremDesk's local AI models aren't installed yet (${missing.map((m) => shortName(m.name)).join(' and ')}). Download them now? It's a one-time download, and resumes if interrupted.`,
+			{ modal: true },
+			download,
+		);
+		if (choice !== download) {
+			throw new Error("the local AI models aren't installed. Choose an API model with the Agent's Model button, or download the models when asked.");
+		}
+		this.installing = (async () => {
+			for (const m of missing) {
+				await vscode.window.withProgress(
+					{ location: vscode.ProgressLocation.Notification, title: `Downloading ${shortName(m.name)}`, cancellable: true },
+					async (progress, token) => {
+						const abort = new AbortController();
+						token.onCancellationRequested(() => abort.abort());
+						let shown = 0;
+						await downloadModel(
+							{ id: m.file, name: shortName(m.name), description: '', file: m.file, url: m.download!.url, sha256: m.download!.sha256, size: m.download!.size, minMemoryGB: 0 },
+							path.dirname(m.path),
+							(bytes, size) => {
+								const pct = Math.floor((bytes / size) * 100);
+								if (pct > shown) {
+									progress.report({ increment: pct - shown, message: `${(bytes / 1e9).toFixed(2)} of ${(size / 1e9).toFixed(2)} GB` });
+									shown = pct;
+								}
+							},
+							abort.signal,
+						);
+					},
+				);
+			}
+			this.refresh();
+			const now = this.ai!;
+			return model.file === now.chat.file ? now.chat : model.file === now.embedding.file ? now.embedding : model;
+		})().finally(() => {
+			this.installing = undefined;
+		});
+		return this.installing;
 	}
 
 	stop(kind?: ServerKind): void {

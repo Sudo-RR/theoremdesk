@@ -250,11 +250,13 @@ for old in "${DEST}"/ai/models/*.gguf; do
   esac
 done
 "${DEST}/ai/llama/$( basename "${SERVER}" )" --version 2>&1 | grep -i 'version' | head -1
+# Where each model comes from, so the app can download one that's missing
+# (the Windows installer installs them separately: see installer/).
 cat > "${DEST}/ai/models.json" << EOF
 {
 	"llama": "$( field llama version )",
-	"chat": { "file": "$( basename "${CHAT_MODEL}" )", "name": "$( field chat-model version )" },
-	"embedding": { "file": "$( basename "${EMBED_MODEL}" )", "name": "$( field embedding-model version )" }
+	"chat": { "file": "$( basename "${CHAT_MODEL}" )", "name": "$( field chat-model version )", "url": "$( field chat-model url )", "sha256": "$( field chat-model sha256 )", "size": $( field chat-model size ) },
+	"embedding": { "file": "$( basename "${EMBED_MODEL}" )", "name": "$( field embedding-model version )", "url": "$( field embedding-model url )", "sha256": "$( field embedding-model sha256 )", "size": $( field embedding-model size ) }
 }
 EOF
 fi

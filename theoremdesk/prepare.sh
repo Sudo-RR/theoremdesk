@@ -42,6 +42,8 @@ theoremdesk_prepare() {
   if [[ "${OS_NAME}" == "windows" ]]; then
     replace "s|https://vscodium.com|${repo_url}|g" build/win32/code.iss
     replace "s|VSCodium|${ORG_NAME}|g" build/win32/code.iss
+    # Installer stage 2: the local AI models, installed by setup (see installer/).
+    bash "${td_dir}/installer/prepare_installer.sh" .
   elif [[ "${OS_NAME}" == "linux" ]]; then
     for f in resources/linux/code.appdata.xml resources/linux/debian/control.template resources/linux/rpm/code.spec.template; do
       replace "s|VSCodium Team https://github.com/VSCodium/vscodium/graphs/contributors|${ORG_NAME} contributors ${repo_url}/graphs/contributors|g" "${f}"

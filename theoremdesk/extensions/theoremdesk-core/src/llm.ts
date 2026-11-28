@@ -18,7 +18,12 @@ import { exe } from './tools';
 export interface ModelFile {
 	file: string;
 	name: string;
+	/** Where the model is, or (when it isn't installed) where a download should go. */
 	path: string;
+	/** Whether the file is there. */
+	present?: boolean;
+	/** Where to get it, for a bundled model that isn't installed (see installer/). */
+	download?: { url: string; sha256: string; size: number };
 }
 
 export interface LocalAi {
@@ -31,10 +36,32 @@ export interface LocalAi {
 	extraChat: ModelFile[];
 }
 
+interface ManifestModel {
+	file: string;
+	name: string;
+	url?: string;
+	sha256?: string;
+	size?: number;
+}
+
+/**
+ * Folders that may hold the bundled models, in order: the app's own bundle
+ * (a zip or development build), the all-users data folder (Windows
+ * all-users install), and the user's data folder (per-user install, or a
+ * download from the app).
+ */
+export function modelFolders(root: string, platform: NodeJS.Platform, dataDir?: string, env: NodeJS.ProcessEnv = process.env): string[] {
+	return [
+		path.join(root, 'models'),
+		...(platform === 'win32' && env.ProgramData ? [path.join(env.ProgramData, 'TheoremDesk', 'models')] : []),
+		...(dataDir ? [path.join(dataDir, 'models')] : []),
+	];
+}
+
 /** The bundled AI in `<resources>/tools/ai`, if this build has it. */
-export function findLocalAi(toolsRoot: string, platform: NodeJS.Platform, dataDir?: string): LocalAi | undefined {
+export function findLocalAi(toolsRoot: string, platform: NodeJS.Platform, dataDir?: string, env: NodeJS.ProcessEnv = process.env): LocalAi | undefined {
 	const root = path.join(toolsRoot, 'ai');
-	let manifest: { llama?: string; chat?: { file: string; name: string }; embedding?: { file: string; name: string } };
+	let manifest: { llama?: string; chat?: ManifestModel; embedding?: ManifestModel };
 	try {
 		manifest = JSON.parse(fs.readFileSync(path.join(root, 'models.json'), 'utf8'));
 	} catch {
@@ -43,15 +70,27 @@ export function findLocalAi(toolsRoot: string, platform: NodeJS.Platform, dataDi
 	if (!manifest.chat || !manifest.embedding) {
 		return undefined;
 	}
-	const model = (m: { file: string; name: string }, dir = path.join(root, 'models')): ModelFile => ({ ...m, path: path.join(dir, m.file) });
+	const folders = modelFolders(root, platform, dataDir, env);
+	const bundled = (m: ManifestModel): ModelFile => {
+		const found = folders.map((d) => path.join(d, m.file)).find((p) => fs.existsSync(p));
+		// Not installed: a download goes to the user's data folder.
+		const target = found ?? path.join(folders[folders.length - 1], m.file);
+		return {
+			file: m.file,
+			name: m.name,
+			path: target,
+			present: Boolean(found),
+			download: m.url && m.sha256 && m.size ? { url: m.url, sha256: m.sha256, size: m.size } : undefined,
+		};
+	};
 	const extraDir = dataDir ? path.join(dataDir, 'models') : undefined;
 	let extraChat: ModelFile[] = [];
 	try {
 		extraChat = extraDir
 			? fs
 					.readdirSync(extraDir)
-					.filter((f) => f.endsWith('.gguf') && !/embedding|mmproj|mtp-/i.test(f))
-					.map((file) => model({ file, name: file.replace(/\.gguf$/, '') }, extraDir))
+					.filter((f) => f.endsWith('.gguf') && !/embedding|mmproj|mtp-/i.test(f) && f !== manifest.chat!.file && f !== manifest.embedding!.file)
+					.map((file) => ({ file, name: file.replace(/\.gguf$/, ''), path: path.join(extraDir, file), present: true }))
 			: [];
 	} catch {
 		// no downloaded models
@@ -60,8 +99,8 @@ export function findLocalAi(toolsRoot: string, platform: NodeJS.Platform, dataDi
 		root,
 		server: path.join(root, 'llama', exe(platform, 'llama-server')),
 		llamaVersion: manifest.llama ?? '',
-		chat: model(manifest.chat),
-		embedding: model(manifest.embedding),
+		chat: bundled(manifest.chat),
+		embedding: bundled(manifest.embedding),
 		extraChat,
 	};
 }

@@ -2,7 +2,7 @@
 # shellcheck disable=SC1091
 #
 # Build TheoremDesk locally: the unpackaged app, with bundled extensions.
-# Installers are not built yet.
+# Installers: theoremdesk/build_installer.sh, after this.
 #
 #   Windows (Git Bash):  bash theoremdesk/build.sh
 #   macOS / Linux:       bash theoremdesk/build.sh

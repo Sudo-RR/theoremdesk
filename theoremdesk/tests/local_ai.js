@@ -14,7 +14,9 @@ const steps = [];
 const step = (name, ok, detail) => steps.push({ name, ok: Boolean(ok), detail });
 
 async function main() {
-	const ai = findLocalAi(path.join(resources, 'tools'), process.platform);
+	// The bundle, or (an installed TheoremDesk) the data folders its installer puts the models in.
+	const { dataDirectory } = require(path.join(out, 'tools.js'));
+	const ai = findLocalAi(path.join(resources, 'tools'), process.platform, dataDirectory(process.platform, process.env, require('os').homedir()));
 	if (!ai) {
 		step('the build bundles the local AI', false, 'no tools/ai/models.json');
 		return;

@@ -19,6 +19,9 @@ function fakeBundle() {
 		path.join(ai, 'models.json'),
 		JSON.stringify({ llama: 'llama.cpp b12774', chat: { file: 'chat.gguf', name: 'Qwen3.5-9B' }, embedding: { file: 'embed.gguf', name: 'Qwen3-Embedding-0.6B' } }),
 	);
+	for (const f of ['chat.gguf', 'embed.gguf']) {
+		fs.writeFileSync(path.join(ai, 'models', f), '');
+	}
 	const data = path.join(dir, 'data');
 	fs.mkdirSync(path.join(data, 'models'), { recursive: true });
 	for (const f of ['Qwen3.5-4B-Q4_K_M.gguf', 'mmproj-x.gguf', 'notes.txt']) {
@@ -167,6 +170,35 @@ test('downloadModel resumes, checks the SHA-256, and refuses a bad file', async 
 		const bad = { ...spec, file: 'bad.gguf', sha256: '0'.repeat(64) };
 		await assert.rejects(A.downloadModel(bad, dir, undefined, undefined, fakeFetch), /didn't match its checksum/);
 		assert.ok(!fs.existsSync(path.join(dir, 'bad.gguf')) && !fs.existsSync(path.join(dir, 'bad.gguf.part')));
+	} finally {
+		fs.rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('models are found in the bundle, the all-users folder or the user folder, else offered for download', () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'td-ai-where-'));
+	try {
+		const tools = path.join(dir, 'tools');
+		fs.mkdirSync(path.join(tools, 'ai', 'models'), { recursive: true });
+		const pin = { url: 'https://huggingface.co/x/resolve/abc/chat.gguf', sha256: 'a'.repeat(64), size: 123 };
+		const embedPin = { ...pin, url: 'https://huggingface.co/x/resolve/abc/embed.gguf' };
+		fs.writeFileSync(path.join(tools, 'ai', 'models.json'), JSON.stringify({ llama: 'b', chat: { file: 'chat.gguf', name: 'Chat', ...pin }, embedding: { file: 'embed.gguf', name: 'Embed', ...embedPin } }));
+		const data = path.join(dir, 'data');
+		const programData = path.join(dir, 'ProgramData');
+		fs.mkdirSync(path.join(data, 'models'), { recursive: true });
+		fs.mkdirSync(path.join(programData, 'TheoremDesk', 'models'), { recursive: true });
+		// An all-users install: the chat model in ProgramData; the embedding model not installed.
+		fs.writeFileSync(path.join(programData, 'TheoremDesk', 'models', 'chat.gguf'), '');
+		// The installer's own models in the user folder aren't "other downloaded models".
+		fs.writeFileSync(path.join(data, 'models', 'chat.gguf'), '');
+		const ai = A.findLocalAi(tools, 'win32', data, { ProgramData: programData });
+		assert.equal(ai.chat.path, path.join(programData, 'TheoremDesk', 'models', 'chat.gguf'));
+		assert.equal(ai.chat.present, true);
+		assert.equal(ai.embedding.present, false);
+		assert.equal(ai.embedding.path, path.join(data, 'models', 'embed.gguf'), 'a download goes to the user folder');
+		assert.deepEqual(ai.embedding.download, embedPin);
+		assert.deepEqual(ai.extraChat, []);
+		assert.deepEqual(A.modelFolders(path.join(tools, 'ai'), 'linux', data, {}), [path.join(tools, 'ai', 'models'), path.join(data, 'models')]);
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true });
 	}
