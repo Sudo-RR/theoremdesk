@@ -300,7 +300,7 @@ while IFS=$'\t' read -r ok name detail; do
     echo "  FAIL  ${name}"
     printf '%s\n' "${detail}" | tail -15 | sed 's/^/        /'
   fi
-done < <( { "${PY}" "${TD_DIR}/tests/report_steps.py" "${WORK}/local_ai.json" "${WORK}/local_ai.err" 7 ||
+done < <( { "${PY}" "${TD_DIR}/tests/report_steps.py" "${WORK}/local_ai.json" "${WORK}/local_ai.err" 8 ||
   printf 'False\tthe local AI results are reported\treport_steps.py failed\n'; } | tr -d '\r' )
 
 echo

@@ -207,6 +207,36 @@
 				"title": "Open Paper",
 				"category": "TheoremDesk",
 				"icon": "$(link-external)"
+			},
+			{
+				"command": "theoremdesk.agent.newChat",
+				"title": "New Agent Chat",
+				"category": "TheoremDesk",
+				"icon": "$(add)"
+			},
+			{
+				"command": "theoremdesk.agent.chooseModel",
+				"title": "Choose the Agent Model...",
+				"category": "TheoremDesk",
+				"icon": "$(hubot)"
+			},
+			{
+				"command": "theoremdesk.agent.openCodex",
+				"title": "Open Codex (ChatGPT plan)",
+				"category": "TheoremDesk",
+				"icon": "$(terminal)"
+			},
+			{
+				"command": "theoremdesk.agent.openClaudeCode",
+				"title": "Open Claude Code (Claude plan)",
+				"category": "TheoremDesk",
+				"icon": "$(terminal)"
+			},
+			{
+				"command": "theoremdesk.agent.ask",
+				"title": "Ask the Agent...",
+				"category": "TheoremDesk",
+				"icon": "$(comment-discussion)"
 			}
 		],
 		"viewsContainers": {
@@ -239,6 +269,11 @@
 				{
 					"id": "theoremdesk.library",
 					"name": "Library"
+				},
+				{
+					"type": "webview",
+					"id": "theoremdesk.agent",
+					"name": "Agent"
 				}
 			]
 		},
@@ -623,6 +658,38 @@
 					"type": "boolean",
 					"default": true,
 					"markdownDescription": "When you add a paper to a `.bib` from the Literature view, also read it into the library (its free PDF, else its abstract)."
+				},
+				"theoremdesk.agent.provider": {
+					"type": "string",
+					"enum": [
+						"local",
+						"openai",
+						"anthropic",
+						"custom"
+					],
+					"default": "local",
+					"markdownDescription": "Where the agent model runs: TheoremDesk Local (offline), or a provider API with your key."
+				},
+				"theoremdesk.agent.model": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "The model ID for an API provider."
+				},
+				"theoremdesk.agent.baseUrl": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "The address of an OpenAI-compatible API (for the `custom` provider)."
+				},
+				"theoremdesk.agent.thinking": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "Let the local model reason step by step before answering: better on hard problems, much slower on a laptop."
+				},
+				"theoremdesk.agent.maxSteps": {
+					"type": "number",
+					"default": 12,
+					"minimum": 1,
+					"markdownDescription": "The most model calls the agent makes for one message."
 				}
 			}
 		}

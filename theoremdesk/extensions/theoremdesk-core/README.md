@@ -117,6 +117,31 @@ The **Library** view (in the ⊢ sidebar) holds papers read in full, on your mac
 
 The library is stored in TheoremDesk's data folder (`library/`: `papers.json`, `chunks.jsonl`, `vectors.f32`), written atomically. Damaged files are set aside rather than silently lost.
 
+### The Agent
+
+The **Agent** view (in the ⊢ sidebar), or **TheoremDesk: Ask the Agent**, is a research assistant that works in your project. The answer streams in as it's written, and each tool call appears as a card you can expand to see its result. It's told about the open file and any selected text.
+
+| Tool | Does | Asks first |
+|---|---|---|
+| `search_literature` | Searches arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex | |
+| `search_library` | Finds passages in your library, with paper and page | |
+| `list_files`, `read_file` | Reads the project | |
+| `add_to_bibliography` | Adds a paper to the `.bib` and returns its key | yes |
+| `write_file`, `edit_file` | Creates or changes a file | yes |
+| `check_lean` | Compiles a Lean file (`lake env lean`); says plainly if it uses `sorry` | yes |
+| `compile_latex` | Runs pdflatex (and bibtex) and returns the errors | yes |
+| `run_python` | Runs Python with SymPy, NumPy and SciPy | yes |
+
+Every path must be inside the open project. Anything that changes files or runs code needs approval each time, or for the rest of the chat if you choose; the approval shows the exact code or change. Lean is included because Lean files can run arbitrary programs while they compile.
+
+**The model** (the Model button in the view):
+
+- **TheoremDesk Local**, the default: the bundled Qwen3.5-9B, offline and free. On a laptop with integrated graphics, a task using three tools takes about a minute and a half.
+- **OpenAI API**, **Anthropic API** (its OpenAI-compatible endpoint), or **another OpenAI-compatible API** (OpenRouter, Hugging Face, a server of your own), with your key. Keys are kept in the operating system's secure storage and sent only to that provider.
+- **ChatGPT Plus/Pro** or **Claude Pro/Max**: these plans work through the providers' own agents, so TheoremDesk opens **Codex** or **Claude Code** in a terminal in your project, with its literature tools attached. Claude Code gets them for that session (`--mcp-config`). For Codex, TheoremDesk asks before running `codex mcp add theoremdesk-literature`, which changes Codex's settings. If the tool isn't installed, TheoremDesk links to its install page.
+
+`theoremdesk.agent.thinking` lets the local model reason step by step before answering: better on hard problems, much slower on a laptop. `theoremdesk.agent.maxSteps` (default 12) limits how many model calls one message can make.
+
 `src/llm.ts` starts the servers and is an OpenAI-compatible client (chat with tool calls, and embeddings), so a remote provider can be used the same way. The offline test (`tests/local_ai.js`) runs both models with the network cut: the agent must answer, and call a tool with valid arguments, and the embedding model must rank the relevant passage first.
 
 ## Developing

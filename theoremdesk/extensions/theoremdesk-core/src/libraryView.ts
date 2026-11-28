@@ -36,6 +36,11 @@ export class LibraryView implements vscode.TreeDataProvider<Item>, vscode.Dispos
 		private readonly ai: LocalAiService,
 	) {}
 
+	/** The library itself, for the agent's search_library tool. */
+	libraryStore(): Library {
+		return this.library;
+	}
+
 	dispose(): void {
 		this.changed.dispose();
 	}

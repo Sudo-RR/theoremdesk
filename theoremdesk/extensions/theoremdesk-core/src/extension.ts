@@ -7,7 +7,9 @@ import { newLatexDocument, openPendingDocument, setReferenceStyle } from './late
 import { LiteratureView, registerLiteratureMcpServer } from './literatureView';
 import { MutationView } from './mutation';
 import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
+import { AgentView } from './agentView';
 import { LibraryView } from './libraryView';
+import { openCliAgent, Providers } from './providers';
 import { LocalAiService } from './localAiService';
 import { VerificationView } from './verify';
 
@@ -126,6 +128,19 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('theoremdesk.library.addPaper', (item) => lib.addPaper(item)),
 		vscode.commands.registerCommand('theoremdesk.library.remove', (item) => lib.remove(item)),
 		vscode.commands.registerCommand('theoremdesk.library.open', (item) => lib.open(item)),
+	);
+
+	// The research agent.
+	const providers = new Providers(context, localAi);
+	const agent = new AgentView(context, localAi, providers, () => lib.libraryStore());
+	context.subscriptions.push(
+		agent,
+		vscode.window.registerWebviewViewProvider('theoremdesk.agent', agent, { webviewOptions: { retainContextWhenHidden: true } }),
+		vscode.commands.registerCommand('theoremdesk.agent.newChat', () => agent.newChat()),
+		vscode.commands.registerCommand('theoremdesk.agent.ask', (text?: string) => agent.ask(typeof text === 'string' ? text : undefined)),
+		vscode.commands.registerCommand('theoremdesk.agent.chooseModel', () => providers.choose()),
+		vscode.commands.registerCommand('theoremdesk.agent.openCodex', () => openCliAgent(context, 'codex')),
+		vscode.commands.registerCommand('theoremdesk.agent.openClaudeCode', () => openCliAgent(context, 'claude')),
 	);
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {

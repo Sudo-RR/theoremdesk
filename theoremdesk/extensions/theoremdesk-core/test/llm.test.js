@@ -96,7 +96,7 @@ test('the client speaks OpenAI chat (with tools) and embeddings', async () => {
 		});
 	});
 	await new Promise((r) => server.listen(0, '127.0.0.1', r));
-	const client = new A.OpenAiClient(`http://127.0.0.1:${server.address().port}/v1`, 'secret', 'm');
+	const client = new A.OpenAiClient(`http://127.0.0.1:${server.address().port}/v1`, 'secret', 'm', true);
 	try {
 		const tools = [{ type: 'function', function: { name: 'search_literature', description: 'd', parameters: { type: 'object' } } }];
 		const reply = await client.chat([{ role: 'user', content: 'hi' }], { tools, thinking: false });

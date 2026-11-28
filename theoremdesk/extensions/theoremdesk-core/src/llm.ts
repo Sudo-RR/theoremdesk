@@ -316,7 +316,7 @@ export class LlamaServer {
 	}
 
 	client(): OpenAiClient {
-		return new OpenAiClient(`${this.url}/v1`, this.apiKey, this.model.name);
+		return new OpenAiClient(`${this.url}/v1`, this.apiKey, this.model.name, true);
 	}
 
 	stop(): void {
@@ -367,7 +367,103 @@ export class OpenAiClient {
 		readonly baseUrl: string,
 		private readonly apiKey: string,
 		readonly model: string,
+		/** A local llama-server, which accepts llama.cpp's extra options. */
+		readonly local = false,
 	) {}
+
+	private body(messages: ChatMessage[], options: ChatOptions): Record<string, unknown> {
+		const body: Record<string, unknown> = {
+			model: this.model,
+			messages,
+			temperature: options.temperature ?? 0.6,
+			max_tokens: options.maxTokens ?? 4096,
+		};
+		if (options.tools && options.tools.length > 0) {
+			body.tools = options.tools;
+			body.tool_choice = 'auto';
+		}
+		if (options.thinking !== undefined && this.local) {
+			body.chat_template_kwargs = { enable_thinking: options.thinking };
+		}
+		return body;
+	}
+
+	/**
+	 * Chat, streaming: `onDelta` gets text and reasoning as they're written.
+	 * Tool calls arrive in pieces and are assembled.
+	 */
+	async chatStream(messages: ChatMessage[], options: ChatOptions, onDelta: (delta: { content?: string; reasoning?: string }) => void): Promise<ChatReply> {
+		const response = await fetch(`${this.baseUrl}/chat/completions`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` },
+			body: JSON.stringify({ ...this.body(messages, options), stream: true, stream_options: { include_usage: true } }),
+			signal: options.signal,
+		});
+		if (!response.ok || !response.body) {
+			throw new Error(`${this.model} answered ${response.status}: ${(await response.text()).slice(0, 500)}`);
+		}
+		let content = '';
+		let reasoning = '';
+		let finishReason = '';
+		let usage: ChatReply['usage'];
+		const calls: ToolCall[] = [];
+		let buffer = '';
+		const decoder = new TextDecoder();
+		const handle = (data: string) => {
+			if (data === '[DONE]') {
+				return;
+			}
+			const event = JSON.parse(data) as {
+				choices?: {
+					delta?: {
+						content?: string | null;
+						reasoning_content?: string | null;
+						tool_calls?: { index: number; id?: string; function?: { name?: string; arguments?: string } }[];
+					};
+					finish_reason?: string | null;
+				}[];
+				usage?: ChatReply['usage'];
+			};
+			usage = event.usage ?? usage;
+			const choice = event.choices?.[0];
+			if (!choice) {
+				return;
+			}
+			const d = choice.delta ?? {};
+			if (d.content) {
+				content += d.content;
+				onDelta({ content: d.content });
+			}
+			if (d.reasoning_content) {
+				reasoning += d.reasoning_content;
+				onDelta({ reasoning: d.reasoning_content });
+			}
+			for (const t of d.tool_calls ?? []) {
+				const call = (calls[t.index] ??= { id: t.id ?? `call_${t.index}`, type: 'function', function: { name: '', arguments: '' } });
+				if (t.id) {
+					call.id = t.id;
+				}
+				call.function.name += t.function?.name ?? '';
+				call.function.arguments += t.function?.arguments ?? '';
+			}
+			finishReason = choice.finish_reason ?? finishReason;
+		};
+		for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+			buffer += decoder.decode(chunk, { stream: true });
+			let newline: number;
+			while ((newline = buffer.indexOf('\n')) >= 0) {
+				const line = buffer.slice(0, newline).trim();
+				buffer = buffer.slice(newline + 1);
+				if (line.startsWith('data:')) {
+					handle(line.slice(5).trim());
+				}
+			}
+		}
+		if (buffer.trim().startsWith('data:')) {
+			handle(buffer.trim().slice(5).trim());
+		}
+		return { content: stripThinking(content), reasoning: reasoning || undefined, toolCalls: calls.filter(Boolean), finishReason, usage };
+	}
 
 	private async post<T>(endpoint: string, body: object, signal?: AbortSignal): Promise<T> {
 		const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -384,19 +480,7 @@ export class OpenAiClient {
 	}
 
 	async chat(messages: ChatMessage[], options: ChatOptions = {}): Promise<ChatReply> {
-		const body: Record<string, unknown> = {
-			model: this.model,
-			messages,
-			temperature: options.temperature ?? 0.6,
-			max_tokens: options.maxTokens ?? 4096,
-		};
-		if (options.tools && options.tools.length > 0) {
-			body.tools = options.tools;
-			body.tool_choice = 'auto';
-		}
-		if (options.thinking !== undefined) {
-			body.chat_template_kwargs = { enable_thinking: options.thinking };
-		}
+		const body = this.body(messages, options);
 		const reply = await this.post<{
 			choices: { message: { content: string | null; reasoning_content?: string; tool_calls?: ToolCall[] }; finish_reason: string }[];
 			usage?: ChatReply['usage'];

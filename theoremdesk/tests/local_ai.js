@@ -114,6 +114,32 @@ async function main() {
 			tc?.function.name === 'search_literature' && typeof args.query === 'string' && /large\s*n|superconformal/i.test(args.query),
 			tc ? `${tc.function.name}(${tc.function.arguments})` : `no tool call; said "${call.content.slice(0, 120)}"`,
 		);
+
+		// A short agent session: it must find and read a project file with its
+		// tools, then answer from it.
+		const { runAgent, AGENT_SYSTEM } = require(path.join(out, 'agent.js'));
+		const { createAgentTools } = require(path.join(out, 'agentTools.js'));
+		const fs = require('fs');
+		const os = require('os');
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), 'td-agent-'));
+		try {
+			fs.writeFileSync(path.join(root, 'notes.md'), '# Notes\nThe measured damping coefficient of the rig is gamma = 0.0437 per second.\n');
+			const tools = createAgentTools({ root, python: python || 'python', sources: [] }).filter((t) => ['list_files', 'read_file'].includes(t.name));
+			const messages = [
+				{ role: 'system', content: AGENT_SYSTEM },
+				{ role: 'user', content: 'What damping coefficient do my notes give? Look in the project files.' },
+			];
+			const used = [];
+			const t2 = Date.now();
+			const reply = await runAgent(client, messages, tools, { thinking: false, maxSteps: 6, onEvent: (e) => e.type === 'tool-start' && used.push(e.name) });
+			step(
+				'the agent reads project files with its tools and answers from them',
+				used.includes('read_file') && /0\.0437/.test(reply),
+				`tools ${used.join(' → ') || 'none'}; ${((Date.now() - t2) / 1000).toFixed(0)} s: "${reply.replace(/\s+/g, ' ').slice(0, 120)}"`,
+			);
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
 	} catch (error) {
 		step('the agent model loads', false, String(error.message || error));
 	} finally {
