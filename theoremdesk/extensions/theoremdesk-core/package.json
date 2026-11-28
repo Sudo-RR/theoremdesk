@@ -21,7 +21,7 @@
 		"*"
 	],
 	"scripts": {
-		"compile": "tsc -p ./",
+		"compile": "tsc -p ./ && node copy-katex.js",
 		"watch": "tsc -watch -p ./",
 		"test": "npm run compile && node --test \"test/**/*.test.js\""
 	},
@@ -697,6 +697,7 @@
 	"devDependencies": {
 		"@types/node": "^24.19.4",
 		"@types/vscode": "~1.95.0",
+		"katex": "0.19.1",
 		"typescript": "~5.9.3"
 	}
 }

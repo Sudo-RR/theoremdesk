@@ -23,6 +23,15 @@ exports.run = async function run() {
 		await ext.activate();
 		step('the TheoremDesk extension activates', ext.isActive, ext.packageJSON.version);
 
+		// TD_APP_TEST_MODE=restore: only check that the last run's chat came back.
+		if (process.env.TD_APP_TEST_MODE === 'restore') {
+			const chat = ext.exports.testing.chat();
+			const users = chat.display.filter((d) => d.kind === 'user').map((d) => d.text.slice(0, 50));
+			step('the saved chat is restored when the project reopens', users.length >= 2 && chat.messages > 4, `${chat.messages} messages, ${chat.display.length} items; questions: ${users.join(' | ')}`);
+			save('finished');
+			return;
+		}
+
 		const commands = await vscode.commands.getCommands(true);
 		const wanted = ['theoremdesk.agent.ask', 'theoremdesk.agent.chooseModel', 'theoremdesk.library.ask', 'theoremdesk.library.addPdf', 'theoremdesk.ai.status', 'theoremdesk.literature.search'];
 		const missing = wanted.filter((c) => !commands.includes(c));
@@ -39,6 +48,44 @@ exports.run = async function run() {
 			typeof answer === 'string' && /elliptic|K\s*\(|K\(/i.test(answer) && !/^Error/.test(answer),
 			`${((Date.now() - t) / 1000).toFixed(0)} s: ${String(answer).replace(/\s+/g, ' ').slice(0, 300)}`,
 		);
+
+		// An edit: the change must open as a diff for review, apply through the
+		// editor when accepted, and be undoable. The test answers the approval
+		// dialog in place of the user, recording what was on screen.
+		const root = vscode.workspace.workspaceFolders[0].uri.fsPath;
+		const notes = path.join(root, 'notes.md');
+		const before = fs.readFileSync(notes, 'utf8');
+		const asked = [];
+		ext.exports.testing.answerApprovals((question, diffOpen) => {
+			asked.push({ question, diffOpen });
+			return /Apply the agent's change/.test(question) ? 'Apply' : undefined;
+		});
+		save('asking for an edit');
+		const t2 = Date.now();
+		let edited;
+		try {
+			edited = await vscode.commands.executeCommand(
+				'theoremdesk.agent.ask',
+				'In notes.md, use edit_file to replace the words "The pendulum period" with "The period of a pendulum". Change nothing else.',
+			);
+		} finally {
+			ext.exports.testing.answerApprovals(() => undefined);
+		}
+		const after = fs.readFileSync(notes, 'utf8');
+		step(
+			'an agent edit opens as a diff, and is applied when accepted',
+			asked.length > 0 && asked.every((a) => a.diffOpen) && after.includes('The period of a pendulum') && after !== before,
+			`${((Date.now() - t2) / 1000).toFixed(0)} s; asked ${asked.length}x, diff open: ${asked.map((a) => a.diffOpen).join(',')}; file now: ${after.split('\n')[1]}; agent: ${String(edited).replace(/\s+/g, ' ').slice(0, 120)}`,
+		);
+		const doc = await vscode.workspace.openTextDocument(notes);
+		await vscode.window.showTextDocument(doc);
+		await vscode.commands.executeCommand('undo');
+		step(
+			'Undo in the editor reverts the agent edit',
+			after !== before && doc.getText() === before,
+			`${after === before ? 'nothing was edited, so nothing to undo; ' : ''}${doc.getText().split('\n')[1]}`,
+		);
+		await doc.save();
 	} catch (error) {
 		step('the in-app test runs', false, String(error && error.stack ? error.stack : error));
 	}

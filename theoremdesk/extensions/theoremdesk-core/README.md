@@ -119,7 +119,7 @@ The library is stored in TheoremDesk's data folder (`library/`: `papers.json`, `
 
 ### The Agent
 
-The **Agent** view (in the ⊢ sidebar), or **TheoremDesk: Ask the Agent**, is a research assistant that works in your project. The answer streams in as it's written, and each tool call appears as a card you can expand to see its result. It's told about the open file and any selected text.
+The **Agent** view (in the ⊢ sidebar), or **TheoremDesk: Ask the Agent**, is a research assistant that works in your project. The answer streams in as it's written, with mathematics typeset (KaTeX, bundled, so it works offline), and each tool call appears as a card you can expand to see its result. It's told about the open file and any selected text (including unsaved changes). The chat is saved with the project (in its storage folder, after every turn) and comes back when you reopen it; **New** starts a fresh one.
 
 | Tool | Does | Asks first |
 |---|---|---|
@@ -127,12 +127,15 @@ The **Agent** view (in the ⊢ sidebar), or **TheoremDesk: Ask the Agent**, is a
 | `search_library` | Finds passages in your library, with paper and page | |
 | `list_files`, `read_file` | Reads the project | |
 | `add_to_bibliography` | Adds a paper to the `.bib` and returns its key | yes |
-| `write_file`, `edit_file` | Creates or changes a file | yes |
+| `write_file`, `edit_file` | Creates or changes a file; you review it as a diff first | yes |
 | `check_lean` | Compiles a Lean file (`lake env lean`); says plainly if it uses `sorry` | yes |
 | `compile_latex` | Runs pdflatex (and bibtex) and returns the errors | yes |
 | `run_python` | Runs Python with SymPy, NumPy and SciPy | yes |
+| `run_command` | Runs a terminal command in the project (PowerShell on Windows, bash on Linux), e.g. `lake build` or `git status`; stops after 5 minutes | yes |
 
-Every path must be inside the open project. Anything that changes files or runs code needs approval each time, or for the rest of the chat if you choose; the approval shows the exact code or change. Lean is included because Lean files can run arbitrary programs while they compile.
+Every path must be inside the open project. Anything that changes files or runs code needs approval each time, or for the rest of the chat if you choose; the approval shows the exact code or command. Lean is included because Lean files can run arbitrary programs while they compile.
+
+**Reviewing edits:** each change the agent proposes opens as a side-by-side diff (your file on the left, the proposed file on the right) with **Apply**, **Apply All in This Chat** or cancel. An applied change goes through the editor and is saved, and the file opens, so **Ctrl+Z** undoes it like your own typing.
 
 **The model** (the Model button in the view):
 

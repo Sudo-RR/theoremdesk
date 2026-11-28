@@ -168,3 +168,78 @@ test('repairConversation gives every tool call a result after a stop', () => {
 	A.repairConversation(fine, 'unused');
 	assert.equal(fine.length, 2);
 });
+
+test('proposeChange shows what a file tool would do, without doing it', () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'td-propose-'));
+	try {
+		fs.writeFileSync(path.join(root, 'a.tex'), 'old text, old');
+		const ctx = { root, python: 'python', sources: [] };
+		assert.deepEqual(T.proposeChange(ctx, 'write_file', { path: 'new.txt', content: 'hi' }), { file: path.join(root, 'new.txt'), before: undefined, after: 'hi' });
+		assert.throws(() => T.proposeChange(ctx, 'edit_file', { path: 'a.tex', old_text: 'old', new_text: 'x' }), /appears 2 times/);
+		const c = T.proposeChange(ctx, 'edit_file', { path: 'a.tex', old_text: 'old text', new_text: 'new text' });
+		assert.equal(c.before, 'old text, old');
+		assert.equal(c.after, 'new text, old');
+		assert.equal(fs.readFileSync(path.join(root, 'a.tex'), 'utf8'), 'old text, old', 'nothing written');
+		// Unsaved editor text wins over the file on disk.
+		const live = T.proposeChange({ ...ctx, readText: () => 'unsaved text' }, 'edit_file', { path: 'a.tex', old_text: 'unsaved', new_text: 'saved' });
+		assert.equal(live.after, 'saved text');
+		assert.throws(() => T.proposeChange(ctx, 'edit_file', { path: 'missing.tex', old_text: 'a', new_text: 'b' }), /doesn't exist/);
+	} finally {
+		fs.rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('file tools apply changes through the hook the app provides', async () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'td-apply-'));
+	try {
+		fs.writeFileSync(path.join(root, 'a.txt'), 'one');
+		const applied = [];
+		const tools = Object.fromEntries(T.createAgentTools({ root, python: 'python', sources: [], applyChange: async (f, t) => applied.push([path.basename(f), t]) }).map((t) => [t.name, t]));
+		await tools.edit_file.run({ path: 'a.txt', old_text: 'one', new_text: 'two' });
+		await tools.write_file.run({ path: 'b.txt', content: 'new' });
+		assert.deepEqual(applied, [['a.txt', 'two'], ['b.txt', 'new']]);
+		assert.equal(fs.readFileSync(path.join(root, 'a.txt'), 'utf8'), 'one', 'the hook decides how to write');
+	} finally {
+		fs.rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('run_command runs in the project folder, needs approval, and reports the exit code', async () => {
+	const root = fs.mkdtempSync(path.join(os.tmpdir(), 'td-cmd-'));
+	try {
+		fs.writeFileSync(path.join(root, 'marker.txt'), '');
+		const tool = T.createAgentTools({ root, python: 'python', sources: [] }).find((t) => t.name === 'run_command');
+		assert.ok(tool.needsApproval);
+		const listing = process.platform === 'win32' ? 'Get-ChildItem -Name' : 'ls';
+		assert.match(await tool.run({ command: listing }), /^Exit 0\n[\s\S]*marker\.txt/);
+		assert.match(await tool.run({ command: 'exit 3' }), /^Exit 3/);
+		assert.equal(T.shellFor('win32', 'x').cmd, 'powershell.exe');
+		assert.deepEqual(T.shellFor('linux', 'echo hi').args.slice(-2), ['-c', 'echo hi']);
+	} finally {
+		fs.rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test('saved chats stay a sensible size and keep tool calls with their results', () => {
+	const Module = require('node:module');
+	const orig = Module._load;
+	Module._load = function (r, ...a) {
+		return r === 'vscode' ? {} : orig.call(this, r, ...a);
+	};
+	let V;
+	try {
+		V = require('../out/agentView');
+	} finally {
+		Module._load = orig;
+	}
+	const messages = [{ role: 'system', content: 'sys' }];
+	for (let i = 0; i < 150; i++) {
+		messages.push({ role: 'user', content: `q${i}` }, { role: 'assistant', content: null, tool_calls: [{ id: `c${i}`, type: 'function', function: { name: 'f', arguments: '{}' } }] }, { role: 'tool', tool_call_id: `c${i}`, content: 'x'.repeat(30_000) });
+	}
+	const saved = V.trimForSaving({ version: 1, messages, display: [{ kind: 'tool', id: 'c', summary: 's', result: 'y'.repeat(30_000) }] });
+	assert.ok(saved.messages.length <= 200);
+	assert.equal(saved.messages[0].content, 'sys');
+	assert.equal(saved.messages[1].role, 'user', 'the kept part starts at a question, never at a tool result');
+	assert.ok(saved.messages.every((m) => typeof m.content !== 'string' || m.content.length < 21_000));
+	assert.ok(saved.display[0].result.length < 21_000);
+});

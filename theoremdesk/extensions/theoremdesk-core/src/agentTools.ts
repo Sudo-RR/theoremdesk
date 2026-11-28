@@ -23,6 +23,46 @@ export interface AgentToolContext {
 	embedder?: () => Promise<Embedder>;
 	sources: LiteratureSource[];
 	env?: NodeJS.ProcessEnv;
+	/** Read a file as the user sees it (the app passes open editors' unsaved text). */
+	readText?: (file: string) => string;
+	/** Apply a file change (the app goes through the editor, so it can be undone). */
+	applyChange?: (file: string, text: string) => Promise<void>;
+}
+
+/** The change a file tool would make, for the user to review before it runs. */
+export interface FileChange {
+	file: string;
+	/** undefined for a new file. */
+	before: string | undefined;
+	after: string;
+}
+
+/** Compute what write_file or edit_file would leave in the file, without changing it. */
+export function proposeChange(ctx: AgentToolContext, tool: string, a: Record<string, unknown>): FileChange {
+	const file = insideProject(ctx.root, a.path);
+	const read = ctx.readText ?? ((f: string) => fs.readFileSync(f, 'utf8'));
+	const before = fs.existsSync(file) ? read(file) : undefined;
+	if (tool === 'write_file') {
+		return { file, before, after: String(a.content ?? '') };
+	}
+	if (before === undefined) {
+		throw new Error(`${a.path} doesn't exist; create it with write_file`);
+	}
+	const old = str(a.old_text, 'old_text');
+	const count = before.split(old).length - 1;
+	if (count !== 1) {
+		throw new Error(count === 0 ? 'old_text was not found; read the file again' : `old_text appears ${count} times; include more context`);
+	}
+	return { file, before, after: before.replace(old, () => String(a.new_text ?? '')) };
+}
+
+/** The shell run_command uses: PowerShell on Windows, bash (else sh) elsewhere. */
+export function shellFor(platform: NodeJS.Platform, command: string): { cmd: string; args: string[]; name: string } {
+	if (platform === 'win32') {
+		return { cmd: 'powershell.exe', args: ['-NoProfile', '-NonInteractive', '-Command', command], name: 'PowerShell' };
+	}
+	const bash = ['/bin/bash', '/usr/bin/bash'].find((b) => fs.existsSync(b));
+	return { cmd: bash ?? '/bin/sh', args: ['-c', command], name: bash ? 'bash' : 'sh' };
 }
 
 const SKIP_DIRS = new Set(['.git', '.lake', 'node_modules', '.venv', 'build', '__pycache__', '.ipynb_checkpoints']);
@@ -105,6 +145,12 @@ export function summarizeLean(output: string, code: number): string {
 
 export function createAgentTools(ctx: AgentToolContext): AgentTool[] {
 	const env = ctx.env ?? process.env;
+	const apply =
+		ctx.applyChange ??
+		(async (file: string, text: string) => {
+			fs.mkdirSync(path.dirname(file), { recursive: true });
+			fs.writeFileSync(file, text);
+		});
 	const tex = (name: string) => (ctx.texBin ? path.join(ctx.texBin, process.platform === 'win32' ? `${name}.exe` : name) : name);
 	const tools: AgentTool[] = [
 		{
@@ -198,7 +244,7 @@ export function createAgentTools(ctx: AgentToolContext): AgentTool[] {
 			summarize: (a) => `read ${a.path}`,
 			async run(a) {
 				const file = insideProject(ctx.root, a.path);
-				const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+				const lines = (ctx.readText ?? ((f: string) => fs.readFileSync(f, 'utf8')))(file).split(/\r?\n/);
 				const start = Math.max(1, Number(a.start_line) || 1);
 				const end = Math.min(lines.length, Number(a.end_line) || start + 399);
 				return lines
@@ -214,10 +260,9 @@ export function createAgentTools(ctx: AgentToolContext): AgentTool[] {
 			needsApproval: true,
 			summarize: (a) => `write ${a.path} (${String(a.content ?? '').split('\n').length} lines)`,
 			async run(a) {
-				const file = insideProject(ctx.root, a.path);
-				fs.mkdirSync(path.dirname(file), { recursive: true });
-				fs.writeFileSync(file, String(a.content ?? ''));
-				return `Wrote ${path.relative(ctx.root, file)}.`;
+				const { file, before, after } = proposeChange(ctx, 'write_file', a);
+				await apply(file, after);
+				return `${before === undefined ? 'Created' : 'Replaced'} ${path.relative(ctx.root, file)}.`;
 			},
 		},
 		{
@@ -227,15 +272,21 @@ export function createAgentTools(ctx: AgentToolContext): AgentTool[] {
 			needsApproval: true,
 			summarize: (a) => `edit ${a.path}`,
 			async run(a) {
-				const file = insideProject(ctx.root, a.path);
-				const text = fs.readFileSync(file, 'utf8');
-				const old = str(a.old_text, 'old_text');
-				const count = text.split(old).length - 1;
-				if (count !== 1) {
-					throw new Error(count === 0 ? 'old_text was not found; read the file again' : `old_text appears ${count} times; include more context`);
-				}
-				fs.writeFileSync(file, text.replace(old, () => String(a.new_text ?? '')));
+				const { file, after } = proposeChange(ctx, 'edit_file', a);
+				await apply(file, after);
 				return `Edited ${path.relative(ctx.root, file)}.`;
+			},
+		},
+		{
+			name: 'run_command',
+			description: `Run a terminal command in the project folder (${shellFor(process.platform, '').name}), for example lake build, git status or a test script. Output is returned; it stops after 5 minutes. Prefer the specific tools (check_lean, compile_latex, run_python) when they fit.`,
+			parameters: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] },
+			needsApproval: true,
+			summarize: (a) => `run \`${String(a.command ?? '').slice(0, 200)}\``,
+			async run(a, signal) {
+				const { cmd, args } = shellFor(process.platform, str(a.command, 'command'));
+				const { code, output } = await run(cmd, args, ctx.root, env, 300_000, signal);
+				return `Exit ${code}\n${output || '(no output)'}`;
 			},
 		},
 		{

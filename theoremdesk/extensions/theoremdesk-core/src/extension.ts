@@ -18,7 +18,7 @@ const GETTING_STARTED_SHOWN = 'theoremdesk.gettingStartedShown';
 /** Folder of a project just created, so its README opens once it's loaded. */
 const PENDING_README = 'theoremdesk.pendingReadme';
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): { testing: object } | undefined {
 	const templatesDir = context.asAbsolutePath('templates');
 	const environment = new EnvironmentView(context.asAbsolutePath(path.join('scripts', 'wsl-setup.sh')));
 	const verification = new VerificationView(context.asAbsolutePath(path.join('scripts', 'wsl-verify.sh')));
@@ -150,6 +150,19 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	void openPendingReadme(context);
 	void openPendingDocument(context);
+
+	// Only when VS Code runs extension tests (--extensionTestsPath): let the
+	// in-app test answer the agent's approval questions. Never offered
+	// otherwise, so no other extension can approve the agent's actions.
+	if (context.extensionMode === vscode.ExtensionMode.Test) {
+		return {
+			testing: {
+				answerApprovals: (answer: (question: string, diffOpen: boolean) => string | undefined) => agent.setTestApprover(answer),
+				chat: () => agent.chatForTests(),
+			},
+		};
+	}
+	return undefined;
 }
 
 export function deactivate(): void {}
