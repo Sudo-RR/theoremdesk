@@ -140,6 +140,40 @@ async function main() {
 		} finally {
 			fs.rmSync(root, { recursive: true, force: true });
 		}
+
+		// The startup wizard: check a brief and plan a search with the local
+		// model, then write a project whose manuscript compiles.
+		const W = require(path.join(out, 'wizard.js'));
+		const choices = { kind: 'paper', fieldId: 'classical', title: '', author: 'Test Author', template: 'aps-revtex', journal: 'Physical Review Research', lean: false, notebooks: true, git: false };
+		const t3 = Date.now();
+		const vague = await W.reviewBrief(client, choices, 'I want to study pendulums.');
+		const brief = 'I want to compute the period of the nonlinear pendulum at large amplitude with elliptic integrals and compare it with numerical integration of Hamilton\'s equations.';
+		const plan = await W.planSearch(client, choices, brief);
+		step(
+			'the wizard checks a brief and plans a literature search (local model)',
+			!vague.clear && vague.questions.length > 0 && plan.queries.length > 0 && plan.arxivCategories.every((c) => W.FIELDS.find((f) => f.id === 'classical').arxiv.includes(c)),
+			`${((Date.now() - t3) / 1000).toFixed(0)} s; asked "${vague.questions[0] ?? ''}"; searches: ${plan.queries.map((q) => q.query).join(' | ')}`,
+		);
+		const fs2 = require('fs');
+		const os2 = require('os');
+		const { execFileSync } = require('child_process');
+		const base = fs2.mkdtempSync(path.join(os2.tmpdir(), 'td-wizard-'));
+		try {
+			const papers = [{ source: 'arxiv', id: 'p', arxivId: 'math-ph/0609068', title: 'Complex trajectories of a simple pendulum', authors: ['Bender, Carl M.', 'Holm, Darryl D.'], abstract: '', year: 2007, journal: 'J. Phys. A', volume: '40', pages: 'F81--F89', url: 'https://arxiv.org/abs/math-ph/0609068' }];
+			const written = W.writeProject({ choices: { ...choices, title: plan.title }, brief, plan, papers, latexTemplates: path.join(out, '..', 'latex-templates'), journals: require(path.join(out, '..', 'data', 'journals.json')), toolchain: 'leanprover/lean4:v4.36.0' }, path.join(base, 'pendulum'));
+			const binRoot = path.join(resources, 'tools', 'tinytex', 'bin');
+			const bin = path.join(binRoot, fs2.readdirSync(binRoot)[0]);
+			const exe = (n) => path.join(bin, process.platform === 'win32' ? `${n}.exe` : n);
+			const cwd = path.dirname(written.manuscript);
+			for (const [cmd, args] of [['pdflatex', ['-interaction=nonstopmode', '-halt-on-error', 'main']], ['bibtex', ['main']], ['pdflatex', ['-interaction=nonstopmode', '-halt-on-error', 'main']], ['pdflatex', ['-interaction=nonstopmode', '-halt-on-error', 'main']]]) {
+				execFileSync(exe(cmd), args, { cwd, stdio: 'pipe' });
+			}
+			const bbl = fs2.readFileSync(path.join(cwd, 'main.bbl'), 'latin1');
+			const undefinedRefs = (fs2.readFileSync(path.join(cwd, 'main.log'), 'latin1').match(/Citation .* undefined/g) || []).length;
+			step('the wizard writes a project whose manuscript compiles with its reading list', fs2.existsSync(path.join(cwd, 'main.pdf')) && bbl.includes(written.keys[0]?.key ?? '(none)') && undefinedRefs === 0, `${written.files.length} files; key ${written.keys[0]?.key}; ${undefinedRefs} undefined citations`);
+		} finally {
+			fs2.rmSync(base, { recursive: true, force: true });
+		}
 	} catch (error) {
 		step('the agent model loads', false, String(error.message || error));
 	} finally {

@@ -3,10 +3,38 @@
 Built into TheoremDesk. It adds:
 
 - **TheoremDesk: New Research Project...** (also under File → New File...), which creates a project from a template in `templates/`.
+- The **New Project Wizard** (below): define a project by choosing options and describing your research; TheoremDesk sets it up, finds the literature and fills the bibliography.
 - The **Get started with TheoremDesk** walkthrough, opened on first launch.
 - **Literature**: search across arXiv, INSPIRE-HEP, zbMATH Open, Crossref and OpenAlex, recommendations for the open project, Add to bibliography, and a literature MCP server for agents (see below).
 - The **Environment** view (⊢ icon in the activity bar) and status bar item. They check Git, Python, Lean (elan), TeX and Windows long-path support, plus the open project's `.venv`, Lean version, prebuilt Mathlib and Lean build. Each problem has a one-click fix that runs in its own terminal. The checks live in `src/checks.ts` and don't use the VS Code API, so they're tested against a fake machine.
 - Research defaults: basedpyright as the Python language server (`python.languageServer: None`).
+
+## The New Project Wizard
+
+**TheoremDesk: New Project Wizard** (also under File → New File..., and opened when TheoremDesk starts without a folder: `theoremdesk.wizard.showOnStartup`) defines a project in five steps and does the work:
+
+1. **Project:** what you're starting (paper, Lean formalisation, computation, thesis, talk, report), the field, the journal you're aiming for (which sets the template and reference style), and the parts: a Lean project, notebooks, Git.
+2. **Your research:** a few lines on what you study, what you want to find out, how, and in which setting. **Check my brief** has the AI judge whether that's specific enough to search with; if not, it asks up to three short questions, which you can answer or skip.
+3. **Search plan:** the AI turns the brief into a working title, keywords and 3 to 5 searches, one per part of the brief (object, method, question, related results). Everything is editable, and the sources are preset for the field: INSPIRE for high-energy physics, zbMATH for mathematics.
+4. **Papers:** every search runs on every chosen source. The results are merged, ranked by meaning against your brief (local embedding model), and the AI reads the abstracts of the 15 closest. It rates each from 3 (on your topic) to 0 (not relevant) with a one-line reason. Papers rated 2 or 3 are ticked; change the ticks, or add papers you know by arXiv ID or DOI.
+5. **Create:** the project folder, with:
+   - `manuscript/` from the chosen template, with the brief as a comment in the abstract, the reading list in `references.bib` (INSPIRE's own entries where it has them) and listed with `\nocite` until you cite each one, and the journal's reference style;
+   - `lean/` with Physlib (physics) or Mathlib (mathematics), pinned to the bundled Lean;
+   - `notebooks/01_start.ipynb`, a `README.md` with the brief, the search plan and the reading list with `\cite` keys, and `.theoremdesk/project.json`.
+
+   The project opens, the chosen papers are read into the Library in the background, and the agent offers to draft the introduction from the reading list (as an edit you review).
+
+**How the prompts keep a small local model reliable.** Each AI step has one job and a short list of numbered rules. It gets a worked example, and runs at temperature 0.2 without the slow step-by-step thinking. Its answer must be JSON matching a schema, which llama.cpp enforces while the model writes.
+
+Every answer is then checked:
+- **Retry once:** an unusable answer is retried once, with the reason it was rejected.
+- **Allowed values only:** arXiv categories must come from the field's list.
+- **No invented papers:** a paper the plan says you named is dropped unless its words appear in your brief.
+- **Every paper rated:** the relevance ratings must cover every paper exactly once.
+
+Every step also works without the AI: the plan falls back to your brief's main terms, and papers are ranked by similarity alone.
+
+On a laptop with integrated graphics, a run takes 5 to 7 minutes, most of it the relevance ratings. The AI steps use the model chosen for the agent: TheoremDesk Local, or an API.
 
 ## Verifying proofs with several kernels
 

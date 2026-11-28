@@ -37,6 +37,51 @@ exports.run = async function run() {
 		const missing = wanted.filter((c) => !commands.includes(c));
 		step('agent, library and AI commands are registered', missing.length === 0, missing.length ? `missing ${missing.join(', ')}` : wanted.join(', '));
 
+		await vscode.commands.executeCommand('theoremdesk.newProjectWizard');
+		await new Promise((r) => setTimeout(r, 1500));
+		const wizardTab = vscode.window.tabGroups.all.flatMap((g) => g.tabs).find((t) => t.input instanceof vscode.TabInputWebview && /theoremdesk\.wizard/.test(t.input.viewType));
+		step('the New Project Wizard opens', Boolean(wizardTab), wizardTab ? `tab "${wizardTab.label}"` : 'no wizard tab');
+
+		// Drive the wizard with the messages its page sends, and check its replies.
+		if (wizardTab) {
+			const ask = (m) => ext.exports.testing.wizard(m);
+			const reply = (replies, type) => replies.find((r) => r.type === type);
+			const init = reply(await ask({ type: 'ready' }), 'init');
+			const choices = { kind: 'paper', fieldId: 'classical', title: '', author: 'Test Author', template: 'aps-revtex', journal: 'Physical Review Research', lean: true, notebooks: true, git: true };
+			save('wizard: reviewing a brief');
+			let t3 = Date.now();
+			const review = reply(await ask({ type: 'review', choices, brief: 'I want to study pendulums with computers.' }), 'review')?.review;
+			step('wizard: a vague brief gets clarifying questions', init && init.fields.length > 10 && review && !review.clear && review.questions.length > 0, `${((Date.now() - t3) / 1000).toFixed(0)} s: ${review ? review.questions.join(' | ') : 'no review'}`);
+			const brief = 'I want to compute the period of the nonlinear simple pendulum at large amplitude using complete elliptic integrals, and compare it with numerical integration of Hamilton\'s equations.';
+			save('wizard: planning');
+			t3 = Date.now();
+			const planned = reply(await ask({ type: 'plan', choices, brief, answers: [] }), 'plan');
+			const plan = planned?.plan;
+			step('wizard: a search plan from the brief', plan && plan.queries.length > 0, `${((Date.now() - t3) / 1000).toFixed(0)} s: "${plan?.title}"; ${plan?.queries.map((q) => q.query).join(' | ')}`);
+			save('wizard: searching and rating');
+			t3 = Date.now();
+			const found = reply(await ask({ type: 'search', choices, brief: planned.brief, plan: { ...plan, queries: plan.queries.slice(0, 2) }, sources: ['arxiv', 'openalex', 'crossref'], screen: true }), 'papers');
+			const rated = found?.papers.filter((p) => p.rating !== undefined).length ?? 0;
+			step(
+				'wizard: papers found, ranked and rated',
+				found && found.papers.length > 5 && rated > 0 && found.picked.length > 0,
+				`${((Date.now() - t3) / 1000).toFixed(0)} s: ${found?.papers.length} papers, ${rated} rated, ${found?.picked.length} ticked; top: ${found?.papers[0]?.title} (${found?.papers[0]?.rating}: ${found?.papers[0]?.reason})`,
+			);
+			save('wizard: creating');
+			const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'td-wizard-app-'));
+			t3 = Date.now();
+			const created = reply(await ask({ type: 'create', choices: { ...choices, title: plan.title }, brief: planned.brief, plan, picked: found.picked.slice(0, 4), extra: [], parent, name: 'pendulum-period', addToLibrary: false, openIn: 'this' }), 'created');
+			const root = path.join(parent, 'pendulum-period');
+			const bib = fs.existsSync(path.join(root, 'manuscript', 'references.bib')) ? fs.readFileSync(path.join(root, 'manuscript', 'references.bib'), 'utf8') : '';
+			const entries = (bib.match(/^@/gm) || []).length;
+			step(
+				'wizard: the project is created with its bibliography, Lean and Git',
+				created && created.papers === Math.min(4, found.picked.length) && entries >= created.papers && fs.existsSync(path.join(root, 'lean', 'lakefile.toml')) && fs.existsSync(path.join(root, '.git')),
+				`${((Date.now() - t3) / 1000).toFixed(0)} s: ${created?.files} files, ${created?.papers} papers, ${entries} bib entries (with the template's examples)`,
+			);
+			await vscode.window.tabGroups.close(vscode.window.tabGroups.all.flatMap((g) => g.tabs).filter((t) => t.input instanceof vscode.TabInputWebview && /theoremdesk\.wizard/.test(t.input.viewType)));
+		}
+
 		save('asking the agent');
 		const t = Date.now();
 		const answer = await vscode.commands.executeCommand(

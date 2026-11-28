@@ -352,6 +352,8 @@ export interface ChatOptions {
 	/** Let the model think before answering (Qwen3.5's default). */
 	thinking?: boolean;
 	signal?: AbortSignal;
+	/** Make the answer JSON matching this schema (llama.cpp enforces it while generating). */
+	jsonSchema?: { name: string; schema: object };
 }
 
 export interface ChatReply {
@@ -384,6 +386,9 @@ export class OpenAiClient {
 		}
 		if (options.thinking !== undefined && this.local) {
 			body.chat_template_kwargs = { enable_thinking: options.thinking };
+		}
+		if (options.jsonSchema) {
+			body.response_format = { type: 'json_schema', json_schema: { name: options.jsonSchema.name, schema: options.jsonSchema.schema, strict: true } };
 		}
 		return body;
 	}

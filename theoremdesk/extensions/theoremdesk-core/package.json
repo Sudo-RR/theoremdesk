@@ -237,6 +237,12 @@
 				"title": "Ask the Agent...",
 				"category": "TheoremDesk",
 				"icon": "$(comment-discussion)"
+			},
+			{
+				"command": "theoremdesk.newProjectWizard",
+				"title": "New Project Wizard...",
+				"category": "TheoremDesk",
+				"icon": "$(wand)"
 			}
 		],
 		"viewsContainers": {
@@ -301,6 +307,10 @@
 		],
 		"menus": {
 			"file/newFile": [
+				{
+					"command": "theoremdesk.newProjectWizard",
+					"group": "file"
+				},
 				{
 					"command": "theoremdesk.newResearchProject",
 					"group": "file"
@@ -690,6 +700,11 @@
 					"default": 12,
 					"minimum": 1,
 					"markdownDescription": "The most model calls the agent makes for one message."
+				},
+				"theoremdesk.wizard.showOnStartup": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "Open the **New Project Wizard** when TheoremDesk starts without a folder open."
 				}
 			}
 		}

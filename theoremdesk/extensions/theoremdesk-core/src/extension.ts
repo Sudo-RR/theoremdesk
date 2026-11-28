@@ -10,6 +10,7 @@ import { provisionBundledTools, repairToolchain, Toolchain } from './provision';
 import { AgentView } from './agentView';
 import { LibraryView } from './libraryView';
 import { openCliAgent, Providers } from './providers';
+import { finishWizard, StartupWizard } from './wizardView';
 import { LocalAiService } from './localAiService';
 import { VerificationView } from './verify';
 
@@ -141,7 +142,13 @@ export function activate(context: vscode.ExtensionContext): { testing: object } 
 		vscode.commands.registerCommand('theoremdesk.agent.chooseModel', () => providers.choose()),
 		vscode.commands.registerCommand('theoremdesk.agent.openCodex', () => openCliAgent(context, 'codex')),
 		vscode.commands.registerCommand('theoremdesk.agent.openClaudeCode', () => openCliAgent(context, 'claude')),
+		vscode.commands.registerCommand('theoremdesk.newProjectWizard', () => StartupWizard.open(context, localAi, providers)),
 	);
+	// A project the wizard just created: show it, fill the library, offer the agent's first task.
+	void finishWizard(context, lib, agent);
+	if (!vscode.workspace.workspaceFolders?.length && vscode.workspace.getConfiguration('theoremdesk.wizard').get('showOnStartup', true) && context.extensionMode !== vscode.ExtensionMode.Test) {
+		StartupWizard.open(context, localAi, providers);
+	}
 
 	if (!context.globalState.get<boolean>(GETTING_STARTED_SHOWN)) {
 		void context.globalState.update(GETTING_STARTED_SHOWN, true);
@@ -159,6 +166,7 @@ export function activate(context: vscode.ExtensionContext): { testing: object } 
 			testing: {
 				answerApprovals: (answer: (question: string, diffOpen: boolean) => string | undefined) => agent.setTestApprover(answer),
 				chat: () => agent.chatForTests(),
+				wizard: (message: Parameters<typeof StartupWizard.testMessage>[0]) => StartupWizard.testMessage(message),
 			},
 		};
 	}
